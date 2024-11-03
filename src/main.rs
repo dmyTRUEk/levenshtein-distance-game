@@ -225,7 +225,7 @@ impl<const A: u8> Word<A> {
 				if index1e > self_len { return false }
 				if index2s > self_len { return false }
 				if index2e > self_len { return false }
-				if !(index1s <= index1e && index1e <= index2s && index2s <= index2e) { return false }
+				if !(index1s <= index1e && index1e < index2s && index2s <= index2e) { return false }
 			}
 		}
 		true
