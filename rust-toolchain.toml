@@ -1,0 +1,5 @@
+[toolchain]
+# channel = "stable"
+channel = "nightly"
+# channel = "nightly-2024-10-22"
+components = ["rust-analyzer"]

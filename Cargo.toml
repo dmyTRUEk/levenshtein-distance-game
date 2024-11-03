@@ -1,0 +1,17 @@
+[package]
+name = "levenshtein-distance-game"
+version = "0.0.0"
+edition = "2021"
+authors = ["dmyTRUEk"]
+
+[profile.release]
+opt-level = 3
+# lto = "fat"
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
+#target-cpu = "native" -> RUSTFLAGS='-C target-cpu=native'
+
+[dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
