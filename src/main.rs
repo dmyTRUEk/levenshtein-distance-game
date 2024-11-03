@@ -119,12 +119,18 @@ enum Action {
 	#[cfg(feature = "replace")]
 	Replace { index: usize, char: char },
 
+	// #[cfg(feature = "swap_one")]
 	// SwapAtIndices { index1: usize, index2: usize },
 
 	#[cfg(feature = "swap_ranges")]
+	/// start and end indices are including
 	SwapRanges { index1s: usize, index1e: usize, index2s: usize, index2e: usize },
 
+	// #[cfg(feature = "discard_head_or_tail")]
 	// DiscardHeadOrTail { is_head: bool, index: usize },
+
+	// #[cfg(feature = "copy")]
+	// Copy { index_start: usize, index_end: usize, index_insert: usize },
 }
 
 impl Action {
@@ -229,15 +235,15 @@ struct Word<const A: u8> {
 impl<const A: u8> Word<A> {
 	// const MAX_LEN: usize = 9;
 
-	fn from(chars: Vec<char>) -> Self {
+	fn from(chars: &[char]) -> Self {
 		// if chars.len() == 0 || chars.len() > Self::MAX_LEN { panic!() }
 		// if chars.len() == 0 { panic!() }
-		assert!(chars.clone().into_iter().all(|c| get_alphabet_by_index(A).contains(c)));
-		Self { chars }
+		assert!(chars.into_iter().all(|&c| get_alphabet_by_index(A).contains(c)));
+		Self { chars: chars.to_vec() }
 	}
 
 	fn new(word_str: &str) -> Self {
-		Self::from(word_str.chars().collect())
+		Self::from(&word_str.chars().collect::<Vec<char>>())
 	}
 
 	#[expect(unused)]
@@ -419,7 +425,7 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 		search_depth += 1;
 		// dbg!(search_depth);
 		for (word, actions) in words.into_iter() {
-			// dbg!(&word, &actions);
+			// dbg!(&word, &word_target, &actions);
 			match calc_common_prefix_and_suffix_len(&word, &word_target) {
 				PrefixSuffixLen { prefix_len: 0, suffix_len: 0 } => {
 					for action in word.clone().all_actions() {
@@ -436,9 +442,10 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 				}
 				PrefixSuffixLen { prefix_len, suffix_len } => {
 					// ncp = non common part
+					// dbg!(&word, &word_target);
 					// dbg!(prefix_len, suffix_len);
-					let word_ncp = Word::<A>::from(word.chars[prefix_len..word.len()-suffix_len].to_vec());
-					let word_target_ncp = Word::from(word_target.chars[prefix_len..word_target.len()-suffix_len].to_vec());
+					let word_ncp = Word::<A>::from(&word.chars[prefix_len..word.len()-suffix_len]);
+					let word_target_ncp = Word::from(&word_target.chars[prefix_len..word_target.len()-suffix_len]);
 					for solution in find_solutions_st(word_ncp, word_target_ncp) {
 						// solutions.push(
 						// 	actions

@@ -5,16 +5,18 @@ edition = "2021"
 authors = ["dmyTRUEk"]
 
 [features]
+# rules:
+add = []
+remove = []
+replace = []
+swap_ranges = []
+# default rules:
 default = [
 	"add",
 	"remove",
 	"replace",
 	"swap_ranges",
 ]
-add = []
-remove = []
-replace = []
-swap_ranges = []
 
 [profile.release]
 opt-level = 3
