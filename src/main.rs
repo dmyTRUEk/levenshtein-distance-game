@@ -102,11 +102,27 @@ fn main() {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Action {
+	/* all features/rules:
+	#[cfg(feature = "add")]
+	#[cfg(feature = "remove")]
+	#[cfg(feature = "replace")]
+	#[cfg(feature = "swap_ranges")]
+	*/
+
+	#[cfg(feature = "add")]
 	Add { char: char, index: usize },
+
+	#[cfg(feature = "remove")]
 	Remove { index: usize },
+
+	#[cfg(feature = "replace")]
 	Replace { index: usize, char: char },
+
 	// SwapAtIndices { index1: usize, index2: usize },
+
+	#[cfg(feature = "swap_ranges")]
 	SwapRanges { index1s: usize, index1e: usize, index2s: usize, index2e: usize },
+
 	// DiscardHeadOrTail { is_head: bool, index: usize },
 }
 
@@ -114,15 +130,19 @@ impl Action {
 	fn shift_indices_mut(&mut self, shift: usize) {
 		use Action::*;
 		match self {
+			#[cfg(feature = "add")]
 			Add { char: _, index } => {
 				*index += shift
 			}
+			#[cfg(feature = "remove")]
 			Remove { index } => {
 				*index += shift
 			}
+			#[cfg(feature = "replace")]
 			Replace { index, char: _ } => {
 				*index += shift
 			}
+			#[cfg(feature = "swap_ranges")]
 			SwapRanges { index1s, index1e, index2s, index2e } => {
 				*index1s += shift;
 				*index1e += shift;
@@ -184,18 +204,22 @@ impl<const A: u8> Word<A> {
 	fn is_legal_action(&self, action: Action) -> bool {
 		let self_len = self.len();
 		match action {
+			#[cfg(feature = "add")]
 			Action::Add { index, char: _ } => {
 				// if self_len == Self::MAX_LEN { return false }
 				if index > self_len { return false }
 			}
+			#[cfg(feature = "remove")]
 			Action::Remove { index } => {
 				// if self_len == 1 { return false }
 				if index >= self_len { return false }
 			}
+			#[cfg(feature = "replace")]
 			Action::Replace { index, char } => {
 				if index > self_len { return false }
 				if self.chars[index] == char { return false }
 			}
+			#[cfg(feature = "swap_ranges")]
 			Action::SwapRanges { index1s, index1e, index2s, index2e } => {
 				if index1s > self_len { return false }
 				if index1e > self_len { return false }
@@ -217,15 +241,19 @@ impl<const A: u8> Word<A> {
 		if !self.is_legal_action(action) { panic!("self={self:?}\naction={action:?}") }
 		// dbg!(action);
 		match action {
+			#[cfg(feature = "add")]
 			Action::Add { char, index } => {
 				self.chars.insert(index, char);
 			}
+			#[cfg(feature = "remove")]
 			Action::Remove { index } => {
 				self.chars.remove(index);
 			}
+			#[cfg(feature = "replace")]
 			Action::Replace { index, char } => {
 				self.chars[index] = char;
 			}
+			#[cfg(feature = "swap_ranges")]
 			Action::SwapRanges { index1s, index1e, index2s, index2e } => {
 				let before = &self.chars[..index1s];
 				let part_1 = &self.chars[index1s..=index1e];
@@ -246,16 +274,19 @@ impl<const A: u8> Word<A> {
 			let len = self.len();
 			let alphabet = get_alphabet_by_index(A);
 
+			#[cfg(feature = "add")]
 			for index in 0..=len {
 				for char in alphabet.chars() {
 					yield Action::Add { char, index }
 				}
 			}
 
+			#[cfg(feature = "remove")]
 			for index in 0..len {
 				yield Action::Remove { index }
 			}
 
+			#[cfg(feature = "replace")]
 			for index in 0..len {
 				for char in alphabet.chars() {
 					if self.chars[index] == char { continue }
@@ -263,6 +294,7 @@ impl<const A: u8> Word<A> {
 				}
 			}
 
+			#[cfg(feature = "swap_ranges")]
 			for index1s in 0..len {
 				for index1e in index1s..len {
 					for index2s in index1e+1..len {
@@ -406,6 +438,7 @@ mod tests {
 			)
 		}
 
+		#[cfg(feature = "add")]
 		mod add {
 			use super::*;
 			use Action::Add;
@@ -501,6 +534,7 @@ mod tests {
 			}
 		}
 
+		#[cfg(feature = "remove")]
 		mod remove {
 			use super::*;
 			use Action::Remove;
@@ -581,6 +615,7 @@ mod tests {
 			}
 		}
 
+		#[cfg(feature = "replace")]
 		mod replace {
 			use super::*;
 			use Action::Replace;
@@ -613,6 +648,7 @@ mod tests {
 			}
 		}
 
+		#[cfg(feature = "swap_ranges")]
 		mod swap_ranges {
 			use super::*;
 			use Action::SwapRanges;
