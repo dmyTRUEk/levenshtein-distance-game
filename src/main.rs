@@ -612,6 +612,29 @@ mod tests {
 				)
 			}
 		}
+
+		mod swap_ranges {
+			use super::*;
+			use Action::SwapRanges;
+			#[test]
+			fn foobar_barfoo() {
+				assert_eq!(
+					vec![
+						SwapRanges { index1s: 0, index1e: 2, index2s: 3, index2e: 5 },
+					], //                          012345                  012345
+					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoo"))
+				)
+			}
+			#[test]
+			fn abcfoodefbarxyz_abcbardeffooxyz() {
+				assert_eq!(
+					vec![
+						SwapRanges { index1s: 3, index1e: 5, index2s: 9, index2e: 11 },
+					], //                          012345678901234                  012345678901234
+					find_solution_st(WordEng::new("abcfoodefbarxyz"), WordEng::new("abcbardeffooxyz"))
+				)
+			}
+		}
 	}
 
 	mod find_common_prefix_and_suffix {
