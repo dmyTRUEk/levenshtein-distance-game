@@ -217,7 +217,7 @@ const A_ENG_I: u8 = 0;
 const A_UKR_I: u8 = 1;
 const fn get_alphabet_by_index(index: u8) -> &'static str {
 	const ALPHABET_ENG: &str = "abcdefghijklmnopqrstuvwxyz";
-	const ALPHABET_UKR: &str = "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя";
+	const ALPHABET_UKR: &str = "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя'";
 	match index {
 		A_ENG_I => ALPHABET_ENG,
 		A_UKR_I => ALPHABET_UKR,
