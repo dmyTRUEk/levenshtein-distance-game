@@ -7,7 +7,7 @@
 	stmt_expr_attributes,
 )]
 
-use std::iter::from_coroutine;
+use std::{iter::from_coroutine, ops::Add};
 
 use clap::{Parser, arg};
 
@@ -306,37 +306,57 @@ impl<const A: u8> Word<A> {
 			}
 		})
 	}
+
+	fn dropped_at_index(&self, index: usize) -> Self {
+		let mut self_ = self.clone();
+		self_.chars.remove(index);
+		self_
+	}
+
+	fn dropped_first(&self) -> Self {
+		self.dropped_at_index(0)
+	}
+
+	fn dropped_last(&self) -> Self {
+		self.dropped_at_index(self.len()-1)
+	}
 }
 
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PrefixSuffixLen { prefix_len: usize, suffix_len: usize }
+impl From<(usize, usize)> for PrefixSuffixLen {
+	fn from((prefix_len, suffix_len): (usize, usize)) -> Self {
+		Self { prefix_len, suffix_len }
+	}
+}
+impl Add<PrefixSuffixLen> for (usize, usize) {
+	type Output = PrefixSuffixLen;
+	fn add(self, rhs: PrefixSuffixLen) -> Self::Output {
+		PrefixSuffixLen {
+			prefix_len: self.0 + rhs.prefix_len,
+			suffix_len: self.1 + rhs.suffix_len,
+		}
+	}
+}
 /// Returns number or commond letter in the begin and end of the word.
-fn find_common_prefix_and_suffix<const A: u8>(word1: &Word<A>, word2: &Word<A>) -> (usize, usize) {
-	let word1_len = word1.len();
-	let word2_len = word2.len();
-
-	let mut prefix_len = 0;
-	while {
-		prefix_len < word1_len &&
-		prefix_len < word2_len &&
-		word1.chars[prefix_len] == word2.chars[prefix_len]
-	} {
-		prefix_len += 1;
+fn calc_common_prefix_and_suffix_len<const A: u8>(word1: &Word<A>, word2: &Word<A>) -> PrefixSuffixLen {
+	if word1.len() == 0 || word2.len() == 0 { return (0, 0).into() }
+	else if word1.chars.first() == word2.chars.first() { // if prefix
+		return (1, 0) + calc_common_prefix_and_suffix_len(
+			&word1.dropped_first(),
+			&word2.dropped_first(),
+		)
 	}
-	unmut!(prefix_len);
-
-	let mut suffix_len = 0;
-
-	while {
-		// word1_len >= suffix_len+1 &&
-		// word2_len >= suffix_len+1 &&
-		word1_len > suffix_len &&
-		word2_len > suffix_len &&
-		word1.chars[word1_len-suffix_len-1] == word2.chars[word2_len-suffix_len-1]
-	} {
-		suffix_len += 1;
+	else if word1.chars.last() == word2.chars.last() { // if suffix
+		return (0, 1) + calc_common_prefix_and_suffix_len(
+			&word1.dropped_last(),
+			&word2.dropped_last(),
+		)
 	}
-
-	(prefix_len, suffix_len)
+	else {
+		return (0, 0).into()
+	}
 }
 
 
@@ -352,8 +372,8 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 		// dbg!(search_depth);
 		for (word, actions) in words.into_iter() {
 			// dbg!(&word, &actions);
-			match find_common_prefix_and_suffix(&word, &word_target) {
-				(0, 0) => {
+			match calc_common_prefix_and_suffix_len(&word, &word_target) {
+				PrefixSuffixLen { prefix_len: 0, suffix_len: 0 } => {
 					for action in word.clone().all_actions() {
 						let new_word = word.apply_action(action);
 						// dbg!(&new_word);
@@ -362,7 +382,7 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 						new_words.push((new_word, new_actions));
 					}
 				}
-				(prefix_len, suffix_len) => {
+				PrefixSuffixLen { prefix_len, suffix_len } => {
 					// ncp = non common part
 					// dbg!(prefix_len, suffix_len);
 					let word_ncp = Word::<A>::from(word.chars[prefix_len..word.len()-suffix_len].to_vec());
@@ -673,15 +693,49 @@ mod tests {
 		}
 	}
 
-	mod find_common_prefix_and_suffix {
+	mod calc_common_prefix_and_suffix_len {
 		use super::*;
 		#[test]
 		fn abcxyzdefgh_abcvdefgh() {
 			assert_eq!(
-				(3, 5),
-				find_common_prefix_and_suffix(
+				PrefixSuffixLen { prefix_len: 3, suffix_len: 5 },
+				calc_common_prefix_and_suffix_len(
 					&WordEng::new("abcxyzdefgh"),
 					&WordEng::new("abcvdefgh")
+				)
+			)
+		}
+		#[test]
+		fn kzko_ko() {
+			let expected_solutions = [
+				PrefixSuffixLen { prefix_len: 0, suffix_len: 2 },
+				PrefixSuffixLen { prefix_len: 1, suffix_len: 1 },
+			];
+			let actual_solution = calc_common_prefix_and_suffix_len(
+				&WordEng::new("kzko"),
+				&WordEng::new("ko")
+			);
+			dbg!(expected_solutions);
+			dbg!(actual_solution);
+			assert!(expected_solutions.contains(&actual_solution))
+		}
+		#[test]
+		fn kzz_k() {
+			assert_eq!(
+				PrefixSuffixLen { prefix_len: 1, suffix_len: 0 },
+				calc_common_prefix_and_suffix_len(
+					&WordEng::new("kzz"),
+					&WordEng::new("k")
+				)
+			)
+		}
+		#[test]
+		fn zzk_k() {
+			assert_eq!(
+				PrefixSuffixLen { prefix_len: 0, suffix_len: 1 },
+				calc_common_prefix_and_suffix_len(
+					&WordEng::new("zzk"),
+					&WordEng::new("k")
 				)
 			)
 		}
