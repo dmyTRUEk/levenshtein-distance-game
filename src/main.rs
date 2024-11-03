@@ -310,7 +310,7 @@ fn find_common_prefix_and_suffix<const A: u8>(word1: &Word<A>, word2: &Word<A>) 
 
 fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -> Vec<Vec<Action>> {
 	// dbg!(&word_initial, &word_target);
-	if word_initial == word_target { return vec![] }
+	if word_initial == word_target { return vec![vec![]] }
 	let mut words: Vec<(Word<A>, Vec<Action>)> = vec![(word_initial, vec![])];
 	let mut new_words: Vec<(Word<A>, Vec<Action>)> = vec![];
 	let mut solutions: Vec<Vec<Action>> = vec![];
