@@ -4,6 +4,7 @@
 	coroutines,
 	coroutine_trait,
 	iter_from_coroutine,
+	let_chains,
 	stmt_expr_attributes,
 )]
 
@@ -155,6 +156,53 @@ impl Action {
 	fn shifted_indices(mut self, shift: usize) -> Self {
 		self.shift_indices_mut(shift);
 		self
+	}
+
+	fn is_stupid<const A: u8>(&self, word1: &Word<A>, word2: &Word<A>) -> bool {
+		use Action::*;
+		match self {
+			// OPTIMIZATIONS 1:
+
+			// // abcx -> zabc:
+			// // 1. add{0,x} , remove{4} => 2 ops
+			// // 2. remove{3} , add{0,x} => 2 ops
+			// // 3. swap_ranges{0,2,3,3} => 1 op !!!
+			// #[cfg(all(feature = "add", feature = "remove", feature = "swap_ranges"))]
+			// Add { .. } if word1.len() == word2.len() => true,
+
+			#[cfg(feature = "add")]
+			Add { .. } if word2.len() == 0 => true,
+			#[cfg(feature = "remove")]
+			Remove { .. } if word2.len() == 0 => false,
+			#[cfg(feature = "replace")]
+			Replace { .. } if word2.len() == 0 => true,
+			#[cfg(feature = "swap_ranges")]
+			SwapRanges { .. } if word2.len() == 0 => true,
+
+			// TODO: more?
+
+			_ => false
+		}
+	}
+
+	/// `action_prev.is_stupid_before(action_next)`
+	/// returns if `action_next` is stupid after `action_prev`.
+	fn is_stupid_before(&self, action_next: &Action) -> bool {
+		use Action::*;
+		match (self, action_next) {
+			// OPTIMIZATIONS 2:
+
+			#[cfg(feature = "replace")]
+			(Replace { index: i1, .. }, Replace { index: i2, .. }) if i1 == i2 => true,
+
+			#[cfg(all(feature = "add", feature = "replace"))]
+			(Add { index: i1, .. }, Replace { index: i2, .. }) if i1 == i2 => true,
+
+			#[cfg(all(feature = "add", feature = "remove"))]
+			(Add { index: i1, .. }, Remove { index: i2 }) if i1 == i2 => true,
+
+			_ => false
+		}
 	}
 }
 
@@ -375,6 +423,10 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 			match calc_common_prefix_and_suffix_len(&word, &word_target) {
 				PrefixSuffixLen { prefix_len: 0, suffix_len: 0 } => {
 					for action in word.clone().all_actions() {
+						// use optimizations 1:
+						if action.is_stupid(&word, &word_target) { continue }
+						// use optimizations 2:
+						if let Some(action_prev) = actions.last() && action_prev.is_stupid_before(&action) { continue }
 						let new_word = word.apply_action(action);
 						// dbg!(&new_word);
 						let new_actions = actions.clone().pushed_opt(action);
