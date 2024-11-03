@@ -107,7 +107,7 @@ enum Action {
 	#[cfg(feature = "add")]
 	#[cfg(feature = "remove")]
 	#[cfg(feature = "replace")]
-	#[cfg(feature = "swap_ranges")]
+	#[cfg(feature = "swap")]
 	*/
 
 	#[cfg(feature = "add")]
@@ -122,9 +122,9 @@ enum Action {
 	// #[cfg(feature = "swap_one")]
 	// SwapAtIndices { index1: usize, index2: usize },
 
-	#[cfg(feature = "swap_ranges")]
+	#[cfg(feature = "swap")]
 	/// start and end indices are including
-	SwapRanges { index1s: usize, index1e: usize, index2s: usize, index2e: usize },
+	Swap { index1s: usize, index1e: usize, index2s: usize, index2e: usize },
 
 	// #[cfg(feature = "discard_head_or_tail")]
 	// DiscardHeadOrTail { is_head: bool, index: usize },
@@ -149,8 +149,8 @@ impl Action {
 			Replace { index, char: _ } => {
 				*index += shift
 			}
-			#[cfg(feature = "swap_ranges")]
-			SwapRanges { index1s, index1e, index2s, index2e } => {
+			#[cfg(feature = "swap")]
+			Swap { index1s, index1e, index2s, index2e } => {
 				*index1s += shift;
 				*index1e += shift;
 				*index2s += shift;
@@ -172,8 +172,8 @@ impl Action {
 			// // abcx -> zabc:
 			// // 1. add{0,x} , remove{4} => 2 ops
 			// // 2. remove{3} , add{0,x} => 2 ops
-			// // 3. swap_ranges{0,2,3,3} => 1 op !!!
-			// #[cfg(all(feature = "add", feature = "remove", feature = "swap_ranges"))]
+			// // 3. swap{0,2,3,3} => 1 op !!!
+			// #[cfg(all(feature = "add", feature = "remove", feature = "swap"))]
 			// Add { .. } if word1.len() == word2.len() => true,
 
 			#[cfg(feature = "add")]
@@ -182,8 +182,8 @@ impl Action {
 			Remove { .. } if word2.len() == 0 => false,
 			#[cfg(feature = "replace")]
 			Replace { .. } if word2.len() == 0 => true,
-			#[cfg(feature = "swap_ranges")]
-			SwapRanges { .. } if word2.len() == 0 => true,
+			#[cfg(feature = "swap")]
+			Swap { .. } if word2.len() == 0 => true,
 
 			// TODO: more?
 
@@ -273,8 +273,8 @@ impl<const A: u8> Word<A> {
 				if index > self_len { return false }
 				if self.chars[index] == char { return false }
 			}
-			#[cfg(feature = "swap_ranges")]
-			Action::SwapRanges { index1s, index1e, index2s, index2e } => {
+			#[cfg(feature = "swap")]
+			Action::Swap { index1s, index1e, index2s, index2e } => {
 				if index1s > self_len { return false }
 				if index1e > self_len { return false }
 				if index2s > self_len { return false }
@@ -307,8 +307,8 @@ impl<const A: u8> Word<A> {
 			Action::Replace { index, char } => {
 				self.chars[index] = char;
 			}
-			#[cfg(feature = "swap_ranges")]
-			Action::SwapRanges { index1s, index1e, index2s, index2e } => {
+			#[cfg(feature = "swap")]
+			Action::Swap { index1s, index1e, index2s, index2e } => {
 				let before = &self.chars[..index1s];
 				let part_1 = &self.chars[index1s..=index1e];
 				let middle = &self.chars[index1e+1..index2s];
@@ -348,12 +348,12 @@ impl<const A: u8> Word<A> {
 				}
 			}
 
-			#[cfg(feature = "swap_ranges")]
+			#[cfg(feature = "swap")]
 			for index1s in 0..len {
 				for index1e in index1s..len {
 					for index2s in index1e+1..len {
 						for index2e in index2s..len {
-							yield Action::SwapRanges { index1s, index1e, index2s, index2e }
+							yield Action::Swap { index1s, index1e, index2s, index2e }
 						}
 					}
 				}
@@ -727,15 +727,15 @@ mod tests {
 			}
 		}
 
-		#[cfg(feature = "swap_ranges")]
-		mod swap_ranges {
+		#[cfg(feature = "swap")]
+		mod swap {
 			use super::*;
-			use Action::SwapRanges;
+			use Action::Swap;
 			#[test]
 			fn foobar_barfoo() {
 				assert_eq!(
 					vec![
-						SwapRanges { index1s: 0, index1e: 2, index2s: 3, index2e: 5 },
+						Swap { index1s: 0, index1e: 2, index2s: 3, index2e: 5 },
 					], //                          012345                  012345
 					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoo"))
 				)
@@ -744,7 +744,7 @@ mod tests {
 			fn abcfoodefbarxyz_abcbardeffooxyz() {
 				assert_eq!(
 					vec![
-						SwapRanges { index1s: 3, index1e: 5, index2s: 9, index2e: 11 },
+						Swap { index1s: 3, index1e: 5, index2s: 9, index2e: 11 },
 					], //                          012345678901234                  012345678901234
 					find_solution_st(WordEng::new("abcfoodefbarxyz"), WordEng::new("abcbardeffooxyz"))
 				)

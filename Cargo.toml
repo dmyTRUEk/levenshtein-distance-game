@@ -9,18 +9,18 @@ authors = ["dmyTRUEk"]
 add = []
 remove = []
 replace = []
-swap_ranges = []
+swap = []
 # default rules:
 default = [
 	"add",
 	"remove",
 	"replace",
-	"swap_ranges",
+	"swap",
 ]
 # shortcuts for rule sets:
 ar = ["add", "remove"]
 arr = ["add", "remove", "replace"]
-arrs = ["add", "remove", "replace", "swap_ranges"]
+arrs = ["add", "remove", "replace", "swap"]
 
 [profile.release]
 opt-level = 3
