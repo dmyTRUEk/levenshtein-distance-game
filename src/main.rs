@@ -384,7 +384,9 @@ impl<const A: u8> Word<A> {
 		// if chars.len() == 0 { panic!() }
 		let alphabet = Language::get_alphabet_from_lang_index(A);
 		assert!(chars.into_iter().all(|&c| alphabet.contains(c)));
-		Self { chars: chars.to_vec() }
+		let mut chars = chars.to_vec();
+		chars.shrink_to_fit();
+		Self { chars }
 	}
 
 	fn new(word_str: &str) -> Self {
