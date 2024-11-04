@@ -15,7 +15,7 @@
 )]
 
 #![cfg_attr(
-	feature="aa_by_gen_block",
+	any(feature="aa_by_gen_block", feature="aa_by_gen_fn"),
 	feature(gen_blocks),
 )]
 
@@ -40,6 +40,9 @@ mod aa_by_gen_block;
 
 #[cfg(feature="aa_by_vec_sorted_by_priority")]
 mod aa_by_vec_sorted_by_priority;
+
+#[cfg(feature="aa_by_gen_fn")]
+mod aa_by_gen_fn;
 
 use extensions::{VecPushed, ToStrings};
 use utils_io::prompt;
@@ -102,6 +105,7 @@ fn main() {
 		feature="aa_by_vec",
 		feature="aa_by_gen_block",
 		feature="aa_by_vec_sorted_by_priority",
+		feature="aa_by_gen_fn",
 	)))]
 	compile_error!("One of `aa_by_*` features must be enabled");
 	assert_unique_feature!(
@@ -109,6 +113,7 @@ fn main() {
 		"aa_by_vec",
 		"aa_by_gen_block",
 		"aa_by_vec_sorted_by_priority",
+		"aa_by_gen_fn",
 	);
 
 	let cli_args = CliArgsPre::parse();
@@ -575,6 +580,8 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 						let iter = word.clone().all_actions_iter_by_gen_block();
 						#[cfg(feature="aa_by_vec_sorted_by_priority")]
 						let iter = word.clone().all_actions_vec_sorted_by_priority();
+						#[cfg(feature="aa_by_gen_fn")]
+						let iter = word.clone().all_actions_iter_by_gen_fn();
 						iter
 					} {
 						// use optimizations 1:

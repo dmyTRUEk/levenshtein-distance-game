@@ -33,6 +33,7 @@ aa_by_coroutine = []
 aa_by_vec = []
 aa_by_gen_block = []
 aa_by_vec_sorted_by_priority = []
+aa_by_gen_fn = []
 
 [profile.release]
 opt-level = 3
