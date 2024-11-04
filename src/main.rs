@@ -6,21 +6,40 @@
 )]
 
 #![feature(
-	gen_blocks,
-	coroutines,
-	coroutine_trait,
-	iter_from_coroutine,
 	let_chains,
-	stmt_expr_attributes,
 )]
 
-use std::{iter::from_coroutine, ops::Add};
+#![cfg_attr(
+	feature="aa_by_coroutine",
+	feature(coroutines, coroutine_trait, iter_from_coroutine),
+)]
+
+#![cfg_attr(
+	feature="aa_by_gen_block",
+	feature(gen_blocks),
+)]
+
+
+
+use std::ops::Add;
 
 use clap::{Parser, arg};
 
 mod extensions;
 mod macros;
 mod utils_io;
+
+#[cfg(feature="aa_by_coroutine")]
+mod aa_by_coroutine;
+
+#[cfg(any(feature="aa_by_vec", feature="aa_by_vec_sorted_by_priority"))]
+mod aa_by_vec;
+
+#[cfg(feature="aa_by_gen_block")]
+mod aa_by_gen_block;
+
+#[cfg(feature="aa_by_vec_sorted_by_priority")]
+mod aa_by_vec_sorted_by_priority;
 
 use extensions::{VecPushed, ToStrings};
 use utils_io::prompt;
@@ -78,6 +97,20 @@ impl From<CliArgsPre> for CliArgsPost {
 
 
 fn main() {
+	#[cfg(not(any(
+		feature="aa_by_coroutine",
+		feature="aa_by_vec",
+		feature="aa_by_gen_block",
+		feature="aa_by_vec_sorted_by_priority",
+	)))]
+	compile_error!("One of `aa_by_*` features must be enabled");
+	assert_unique_feature!(
+		"aa_by_coroutine",
+		"aa_by_vec",
+		"aa_by_gen_block",
+		"aa_by_vec_sorted_by_priority",
+	);
+
 	let cli_args = CliArgsPre::parse();
 	let cli_args = CliArgsPost::from(cli_args);
 
@@ -299,41 +332,6 @@ impl Action {
 			_ => false
 		}
 	}
-
-	fn priority(self) -> i32 {
-		use Action::*;
-		match self {
-			#[cfg(feature = "add")]
-			Add { .. } => 1,
-
-			#[cfg(feature = "remove")]
-			Remove { .. } => -1,
-
-			#[cfg(feature = "replace")]
-			Replace { .. } => 0,
-
-			#[cfg(feature = "swap")]
-			Swap { index1s, index1e, index2s, index2e } => ((index1e as i32)-(index1s as i32)+1) * ((index2e as i32)-(index2s as i32)+1),
-
-			#[cfg(feature = "discard")]
-			Discard { index_start, index_end } => -((index_end as i32)-(index_start as i32)+1),
-
-			#[cfg(feature = "copy")]
-			Copy_ { index_start: usize, index_end: usize, index_insert: usize } => todo!(),
-
-			#[cfg(feature = "take")]
-			Take { index_start, index_end } => -((index_end as i32)-(index_start as i32)+1),
-		}
-	}
-}
-
-fn sort_by_priority(v: &mut Vec<Action>) {
-	v.sort_by_key(|a| a.priority());
-}
-
-fn sorted_by_priority(mut v: Vec<Action>) -> Vec<Action> {
-	sort_by_priority(&mut v);
-	v
 }
 
 
@@ -501,203 +499,6 @@ impl<const A: u8> Word<A> {
 		}
 	}
 
-	fn all_actions_iter_by_coroutine(self) -> impl Iterator<Item=Action> {
-		use Action::*;
-		from_coroutine(#[coroutine] move || {
-			let len = self.len();
-			let alphabet = Language::get_alphabet_from_lang_index(A);
-
-			#[cfg(feature = "remove")] // COMPLEXITY: L
-			for index in 0..len {
-				yield Remove { index }
-			}
-
-			#[cfg(feature = "take")] // COMPLEXITY: ~ L^2
-			for index_start in 0..len {
-				for index_end in index_start+1..len {
-					yield Take { index_start, index_end }
-				}
-			}
-
-			#[cfg(feature = "discard")] // COMPLEXITY: ~ L^2
-			for index_start in 0..len {
-				for index_end in index_start+1..len {
-					yield Discard { index_start, index_end }
-				}
-			}
-
-			#[cfg(feature = "replace")] // COMPLEXITY: L * A
-			for index in 0..len {
-				for char in alphabet.chars() {
-					if self.chars[index] == char { continue }
-					yield Replace { char, index }
-				}
-			}
-
-			#[cfg(feature = "swap")] // COMPLEXITY: ~ L^4
-			for index1s in 0..len {
-				for index1e in index1s..len {
-					for index2s in index1e+1..len {
-						for index2e in index2s..len {
-							yield Swap { index1s, index1e, index2s, index2e }
-						}
-					}
-				}
-			}
-
-			#[cfg(feature = "add")] // COMPLEXITY: (L+1) * A
-			for index in 0..=len {
-				for char in alphabet.chars() {
-					yield Add { index, char }
-				}
-			}
-
-			#[cfg(feature = "copy")] // COMPLEXITY: ~ L^3
-			for index_start in 0..len {
-				for index_end in index_start+1..len {
-					for index_insert in 0..=len {
-						yield Copy_ { index_start, index_end, index_insert }
-					}
-				}
-			}
-		})
-	}
-
-	fn all_actions_vec(self) -> Vec<Action> {
-		use Action::*;
-
-		let len = self.len();
-		let alphabet = Language::get_alphabet_from_lang_index(A);
-
-		let mut actions_vec = vec![];
-
-		#[cfg(feature = "remove")] // COMPLEXITY: L
-		for index in 0..len {
-			actions_vec.push(Remove { index });
-		}
-
-		#[cfg(feature = "take")] // COMPLEXITY: ~ L^2
-		for index_start in 0..len {
-			for index_end in index_start+1..len {
-				actions_vec.push(Take { index_start, index_end });
-			}
-		}
-
-		#[cfg(feature = "discard")] // COMPLEXITY: ~ L^2
-		for index_start in 0..len {
-			for index_end in index_start+1..len {
-				actions_vec.push(Discard { index_start, index_end });
-			}
-		}
-
-		#[cfg(feature = "replace")] // COMPLEXITY: L * A
-		for index in 0..len {
-			for char in alphabet.chars() {
-				if self.chars[index] == char { continue }
-				actions_vec.push(Replace { char, index });
-			}
-		}
-
-		#[cfg(feature = "swap")] // COMPLEXITY: ~ L^4
-		for index1s in 0..len {
-			for index1e in index1s..len {
-				for index2s in index1e+1..len {
-					for index2e in index2s..len {
-						actions_vec.push(Swap { index1s, index1e, index2s, index2e });
-					}
-				}
-			}
-		}
-
-		#[cfg(feature = "add")] // COMPLEXITY: (L+1) * A
-		for index in 0..=len {
-			for char in alphabet.chars() {
-				actions_vec.push(Add { index, char });
-			}
-		}
-
-		#[cfg(feature = "copy")] // COMPLEXITY: ~ L^3
-		for index_start in 0..len {
-			for index_end in index_start+1..len {
-				for index_insert in 0..=len {
-					actions_vec.push(Copy_ { index_start, index_end, index_insert });
-				}
-			}
-		}
-
-		actions_vec.shrink_to_fit();
-		actions_vec
-	}
-
-	fn all_actions_vec_sorted_by_priority(self) -> Vec<Action> {
-		let mut actions_vec = self.all_actions_vec();
-		sort_by_priority(&mut actions_vec);
-		actions_vec.shrink_to_fit();
-		actions_vec
-	}
-
-	fn all_actions_iter_by_gen_block(self) -> impl Iterator<Item=Action> {
-		use Action::*;
-		gen move { // edition2024 is required for this
-			let len = self.len();
-			let alphabet = Language::get_alphabet_from_lang_index(A);
-
-			#[cfg(feature = "remove")] // COMPLEXITY: L
-			for index in 0..len {
-				yield Remove { index }
-			}
-
-			#[cfg(feature = "take")] // COMPLEXITY: ~ L^2
-			for index_start in 0..len {
-				for index_end in index_start+1..len {
-					yield Take { index_start, index_end }
-				}
-			}
-
-			#[cfg(feature = "discard")] // COMPLEXITY: ~ L^2
-			for index_start in 0..len {
-				for index_end in index_start+1..len {
-					yield Discard { index_start, index_end }
-				}
-			}
-
-			#[cfg(feature = "replace")] // COMPLEXITY: L * A
-			for index in 0..len {
-				for char in alphabet.chars() {
-					if self.chars[index] == char { continue }
-					yield Replace { char, index }
-				}
-			}
-
-			#[cfg(feature = "swap")] // COMPLEXITY: ~ L^4
-			for index1s in 0..len {
-				for index1e in index1s..len {
-					for index2s in index1e+1..len {
-						for index2e in index2s..len {
-							yield Swap { index1s, index1e, index2s, index2e }
-						}
-					}
-				}
-			}
-
-			#[cfg(feature = "add")] // COMPLEXITY: (L+1) * A
-			for index in 0..=len {
-				for char in alphabet.chars() {
-					yield Add { index, char }
-				}
-			}
-
-			#[cfg(feature = "copy")] // COMPLEXITY: ~ L^3
-			for index_start in 0..len {
-				for index_end in index_start+1..len {
-					for index_insert in 0..=len {
-						yield Copy_ { index_start, index_end, index_insert }
-					}
-				}
-			}
-		}
-	}
-
 	fn dropped_at_index(&self, index: usize) -> Self {
 		let mut self_ = self.clone();
 		let _ = self_.chars.remove(index);
@@ -765,7 +566,17 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 			// dbg!(&word, &word_target, &actions);
 			match calc_common_prefix_and_suffix_len(&word, &word_target) {
 				PrefixSuffixLen { prefix_len: 0, suffix_len: 0 } => {
-					for action in word.clone().all_actions_iter_by_coroutine() {
+					for action in {
+						#[cfg(feature="aa_by_coroutine")]
+						let iter = word.clone().all_actions_iter_by_coroutine();
+						#[cfg(feature="aa_by_vec")]
+						let iter = word.clone().all_actions_vec();
+						#[cfg(feature="aa_by_gen_block")]
+						let iter = word.clone().all_actions_iter_by_gen_block();
+						#[cfg(feature="aa_by_vec_sorted_by_priority")]
+						let iter = word.clone().all_actions_vec_sorted_by_priority();
+						iter
+					} {
 						// use optimizations 1:
 						if action.is_vain(&word, &word_target) { continue }
 						// use optimizations 2:
@@ -1209,48 +1020,6 @@ mod tests {
 					&WordEng::new("k")
 				)
 			)
-		}
-	}
-
-	mod action {
-		use super::*;
-		mod sort_by_priority {
-			use super::*;
-			use Action::*;
-			#[cfg(all(feature="add", feature="remove", feature="replace"))]
-			#[test]
-			fn add_remove_replace() {
-				assert_eq!(
-					vec![
-						Remove { index: 0 },
-						Replace { index: 0, char: 'x' },
-						Action::Add { index: 0, char: 'x' },
-					],
-					sorted_by_priority(vec![
-						Action::Add { index: 0, char: 'x' },
-						Remove { index: 0 },
-						Replace { index: 0, char: 'x' },
-					])
-				)
-			}
-			#[cfg(all(feature="add", feature="remove", feature="replace", feature="swap"))]
-			#[test]
-			fn add_remove_replace_swap() {
-				assert_eq!(
-					vec![
-						Remove { index: 0 },
-						Replace { index: 0, char: 'x' },
-						Action::Add { index: 0, char: 'x' },
-						Swap { index1s: 0, index1e: 2, index2s: 3, index2e: 5 },
-					],
-					sorted_by_priority(vec![
-						Action::Add { index: 0, char: 'x' },
-						Remove { index: 0 },
-						Swap { index1s: 0, index1e: 2, index2s: 3, index2e: 5 },
-						Replace { index: 0, char: 'x' },
-					])
-				)
-			}
 		}
 	}
 }

@@ -16,7 +16,10 @@ discard = []
 copy = []
 take = []
 # default rules:
-default = ["arrsdt"]
+default = [
+	"arrsdt",
+	"aa_by_vec",
+]
 # shortcuts for rule sets:
 ar = ["add", "remove"]
 arr = ["add", "remove", "replace"]
@@ -25,6 +28,11 @@ arrsd = ["add", "remove", "replace", "swap", "discard"]
 arrsdc = ["add", "remove", "replace", "swap", "discard", "copy"]
 arrsdct = ["add", "remove", "replace", "swap", "discard", "copy", "take"]
 arrsdt = ["add", "remove", "replace", "swap", "discard", "take"]
+# `all_actions` generators (mutually exclusive):
+aa_by_coroutine = []
+aa_by_vec = []
+aa_by_gen_block = []
+aa_by_vec_sorted_by_priority = []
 
 [profile.release]
 opt-level = 3
