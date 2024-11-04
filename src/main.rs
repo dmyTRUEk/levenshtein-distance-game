@@ -91,7 +91,7 @@ impl From<CliArgsPre> for CliArgsPost {
 			},
 			word12: word12
 				.map(|word12| {
-					word12.split_once(',').unwrap().to_strings().into()
+					word12.split_once([',', '.', '/', '~']).unwrap().to_strings().into()
 				})
 		}
 	}
