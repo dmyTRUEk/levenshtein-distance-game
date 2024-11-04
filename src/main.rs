@@ -171,6 +171,7 @@ enum Action {
 	#[cfg(feature = "swap")]
 	#[cfg(feature = "discard")]
 	#[cfg(feature = "copy")]
+	#[cfg(feature = "take")]
 	*/
 
 	#[cfg(feature = "add")]
@@ -196,6 +197,10 @@ enum Action {
 	#[cfg(feature = "copy")]
 	/// start and end indices are including
 	Copy_ { index_start: usize, index_end: usize, index_insert: usize },
+
+	#[cfg(feature = "take")]
+	/// start and end indices are including
+	Take { index_start: usize, index_end: usize },
 }
 
 impl Action {
@@ -231,6 +236,11 @@ impl Action {
 				*index_start  += shift;
 				*index_end    += shift;
 				*index_insert += shift;
+			}
+			#[cfg(feature = "take")]
+			Take { index_start, index_end } => {
+				*index_start += shift;
+				*index_end   += shift;
 			}
 		}
 	}
@@ -389,6 +399,12 @@ impl<const A: u8> Word<A> {
 				if index_insert >= self_len { return false }
 				if !(index_start <= index_end) { return false }
 			}
+			#[cfg(feature = "take")]
+			Take { index_start, index_end } => {
+				if index_start >= self_len { return false }
+				if index_end   >= self_len { return false }
+				if !(index_start <= index_end) { return false }
+			}
 		}
 		true
 	}
@@ -440,6 +456,10 @@ impl<const A: u8> Word<A> {
 					self.chars[index_start..=index_end].to_vec()
 				);
 			}
+			#[cfg(feature = "take")]
+			Take { index_start, index_end } => {
+				self.chars = self.chars[index_start..=index_end].to_vec();
+			}
 		}
 	}
 
@@ -465,6 +485,13 @@ impl<const A: u8> Word<A> {
 			for index_start in 0..len {
 				for index_end in index_start+1..len {
 					yield Discard { index_start, index_end }
+				}
+			}
+
+			#[cfg(feature = "take")] // COMPLEXITY: ~ L^2
+			for index_start in 0..len {
+				for index_end in index_start+1..len {
+					yield Take { index_start, index_end }
 				}
 			}
 
@@ -947,6 +974,19 @@ mod tests {
 				assert_eq!(
 					vec![Copy_ { index_start: 3, index_end: 5, index_insert: 0 }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoobar"))
+				)
+			}
+		}
+
+		#[cfg(feature = "take")]
+		mod take {
+			use super::*;
+			use Action::Take;
+			#[test]
+			fn foobar_foo() {
+				assert_eq!(
+					vec![Take { index_start: 3, index_end: 5 }],
+					find_solution_st(WordEng::new("foobarxyz"), WordEng::new("bar"))
 				)
 			}
 		}

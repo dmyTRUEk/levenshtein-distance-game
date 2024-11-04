@@ -12,14 +12,17 @@ replace = []
 swap = []
 discard = []
 copy = []
+take = []
 # default rules:
-default = ["arrsd"]
+default = ["arrsdt"]
 # shortcuts for rule sets:
 ar = ["add", "remove"]
 arr = ["add", "remove", "replace"]
 arrs = ["add", "remove", "replace", "swap"]
 arrsd = ["add", "remove", "replace", "swap", "discard"]
 arrsdc = ["add", "remove", "replace", "swap", "discard", "copy"]
+arrsdct = ["add", "remove", "replace", "swap", "discard", "copy", "take"]
+arrsdt = ["add", "remove", "replace", "swap", "discard", "take"]
 
 [profile.release]
 opt-level = 3
