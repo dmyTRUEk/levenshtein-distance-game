@@ -176,7 +176,7 @@ enum Action {
 	*/
 
 	#[cfg(feature = "add")]
-	Add { char: char, index: usize },
+	Add { index: usize, char: char },
 
 	#[cfg(feature = "remove")]
 	Remove { index: usize },
@@ -209,16 +209,16 @@ impl Action {
 		use Action::*;
 		match self {
 			#[cfg(feature = "add")]
-			Add { char: _, index } => {
-				*index += shift
+			Add { index, char: _ } => {
+				*index += shift;
 			}
 			#[cfg(feature = "remove")]
 			Remove { index } => {
-				*index += shift
+				*index += shift;
 			}
 			#[cfg(feature = "replace")]
 			Replace { index, char: _ } => {
-				*index += shift
+				*index += shift;
 			}
 			#[cfg(feature = "swap")]
 			Swap { index1s, index1e, index2s, index2e } => {
@@ -243,6 +243,8 @@ impl Action {
 				*index_start += shift;
 				*index_end   += shift;
 			}
+			#[allow(unreachable_patterns)] // reason: to test if works with `--no-default-features`
+			_ => {}
 		}
 	}
 
@@ -260,7 +262,7 @@ impl Action {
 			// // 1. add{0,x} , remove{4} => 2 ops
 			// // 2. remove{3} , add{0,x} => 2 ops
 			// // 3. swap{0,2,3,3} => 1 op !!!
-			// #[cfg(all(feature = "add", feature = "remove", feature = "swap"))]
+			// #[cfg(all(feature="add", feature="remove", feature="swap"))]
 			// Add { .. } if word1.len() == word2.len() => true,
 
 			#[cfg(feature = "add")]
@@ -288,10 +290,10 @@ impl Action {
 			#[cfg(feature = "replace")]
 			(Replace { index: i1, .. }, Replace { index: i2, .. }) if i1 == i2 => true,
 
-			#[cfg(all(feature = "add", feature = "replace"))]
+			#[cfg(all(feature="add", feature="replace"))]
 			(Add { index: i1, .. }, Replace { index: i2, .. }) if i1 == i2 => true,
 
-			#[cfg(all(feature = "add", feature = "remove"))]
+			#[cfg(all(feature="add", feature="remove"))]
 			(Add { index: i1, .. }, Remove { index: i2 }) if i1 == i2 => true,
 
 			_ => false
@@ -422,7 +424,7 @@ impl<const A: u8> Word<A> {
 		// dbg!(action);
 		match action {
 			#[cfg(feature = "add")]
-			Add { char, index } => {
+			Add { index, char } => {
 				self.chars.insert(index, char);
 			}
 			#[cfg(feature = "remove")]
@@ -511,7 +513,7 @@ impl<const A: u8> Word<A> {
 			#[cfg(feature = "add")] // COMPLEXITY: (L+1) * A
 			for index in 0..=len {
 				for char in alphabet.chars() {
-					yield Add { char, index }
+					yield Add { index, char }
 				}
 			}
 
@@ -575,7 +577,7 @@ impl<const A: u8> Word<A> {
 		#[cfg(feature = "add")] // COMPLEXITY: (L+1) * A
 		for index in 0..=len {
 			for char in alphabet.chars() {
-				actions_vec.push(Add { char, index });
+				actions_vec.push(Add { index, char });
 			}
 		}
 
@@ -639,7 +641,7 @@ impl<const A: u8> Word<A> {
 			#[cfg(feature = "add")] // COMPLEXITY: (L+1) * A
 			for index in 0..=len {
 				for char in alphabet.chars() {
-					yield Add { char, index }
+					yield Add { index, char }
 				}
 			}
 
@@ -817,7 +819,7 @@ mod tests {
 			#[test]
 			fn b() {
 				assert_eq!(
-					vec![Add { char: 'x', index: 0 }],
+					vec![Add { index: 0, char: 'x' }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("xfoobar"))
 				)
 			}
@@ -825,8 +827,8 @@ mod tests {
 			fn bb() {
 				assert_eq!(
 					vec![
-						Add { char: 'x', index: 0 },
-						Add { char: 'y', index: 0 },
+						Add { index: 0, char: 'x' },
+						Add { index: 0, char: 'y' },
 					],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("yxfoobar"))
 				)
@@ -835,9 +837,9 @@ mod tests {
 			fn bbb() {
 				assert_eq!(
 					vec![
-						Add { char: 'x', index: 0 },
-						Add { char: 'y', index: 0 },
-						Add { char: 'z', index: 0 },
+						Add { index: 0, char: 'x' },
+						Add { index: 0, char: 'y' },
+						Add { index: 0, char: 'z' },
 					],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("zyxfoobar"))
 				)
@@ -845,7 +847,7 @@ mod tests {
 			#[test]
 			fn e() {
 				assert_eq!(
-					vec![Add { char: 'x', index: 6 }],
+					vec![Add { index: 6, char: 'x' }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarx"))
 				)
 			}
@@ -853,8 +855,8 @@ mod tests {
 			fn ee() {
 				assert_eq!(
 					vec![
-						Add { char: 'x', index: 6 },
-						Add { char: 'y', index: 7 },
+						Add { index: 6, char: 'x' },
+						Add { index: 7, char: 'y' },
 					],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxy"))
 				)
@@ -863,9 +865,9 @@ mod tests {
 			fn eee() {
 				assert_eq!(
 					vec![
-						Add { char: 'x', index: 6 },
-						Add { char: 'y', index: 7 },
-						Add { char: 'z', index: 8 },
+						Add { index: 6, char: 'x' },
+						Add { index: 7, char: 'y' },
+						Add { index: 8, char: 'z' },
 					],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxyz"))
 				)
@@ -873,7 +875,7 @@ mod tests {
 			#[test]
 			fn m() {
 				assert_eq!(
-					vec![Add { char: 'x', index: 3 }],
+					vec![Add { index: 3, char: 'x' }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxbar"))
 				)
 			}
@@ -881,8 +883,8 @@ mod tests {
 			fn mm() {
 				assert_eq!(
 					vec![
-						Add { char: 'x', index: 3 },
-						Add { char: 'y', index: 4 },
+						Add { index: 3, char: 'x' },
+						Add { index: 4, char: 'y' },
 					],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxybar"))
 				)
@@ -891,9 +893,9 @@ mod tests {
 			fn mmm() {
 				assert_eq!(
 					vec![
-						Add { char: 'x', index: 3 },
-						Add { char: 'y', index: 4 },
-						Add { char: 'z', index: 5 },
+						Add { index: 3, char: 'x' },
+						Add { index: 4, char: 'y' },
+						Add { index: 5, char: 'z' },
 					],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxyzbar"))
 				)
