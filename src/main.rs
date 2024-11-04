@@ -169,6 +169,7 @@ enum Action {
 	#[cfg(feature = "remove")]
 	#[cfg(feature = "replace")]
 	#[cfg(feature = "swap")]
+	#[cfg(feature = "discard")]
 	*/
 
 	#[cfg(feature = "add")]
@@ -187,8 +188,9 @@ enum Action {
 	/// start and end indices are including
 	Swap { index1s: usize, index1e: usize, index2s: usize, index2e: usize },
 
-	// #[cfg(feature = "discard_head_or_tail")]
-	// DiscardHeadOrTail { is_head: bool, index: usize },
+	#[cfg(feature = "discard")]
+	/// start and end indices are including
+	Discard { index_start: usize, index_end: usize },
 
 	// #[cfg(feature = "copy")]
 	// Copy { index_start: usize, index_end: usize, index_insert: usize },
@@ -216,6 +218,11 @@ impl Action {
 				*index1e += shift;
 				*index2s += shift;
 				*index2e += shift;
+			}
+			#[cfg(feature = "discard")]
+			Discard { index_start, index_end } => {
+				*index_start += shift;
+				*index_end   += shift;
 			}
 		}
 	}
@@ -361,6 +368,12 @@ impl<const A: u8> Word<A> {
 				if index2e >= self_len { return false }
 				if !(index1s <= index1e && index1e < index2s && index2s <= index2e) { return false }
 			}
+			#[cfg(feature = "discard")]
+			Discard { index_start, index_end } => {
+				if index_start >= self_len { return false }
+				if index_end   >= self_len { return false }
+				if !(index_start <= index_end) { return false }
+			}
 		}
 		true
 	}
@@ -401,6 +414,10 @@ impl<const A: u8> Word<A> {
 					.flatten()
 					.collect();
 			}
+			#[cfg(feature = "discard")]
+			Discard { index_start, index_end } => {
+				let _ = self.chars.drain(index_start..=index_end);
+			}
 		}
 	}
 
@@ -420,6 +437,13 @@ impl<const A: u8> Word<A> {
 			#[cfg(feature = "remove")] // COMPLEXITY: L
 			for index in 0..len {
 				yield Remove { index }
+			}
+
+			#[cfg(feature = "discard")] // COMPLEXITY: ~ L^2
+			for index_start in 0..len {
+				for index_end in index_start+1..len {
+					yield Discard { index_start, index_end }
+				}
 			}
 
 			#[cfg(feature = "replace")] // COMPLEXITY: L * A
@@ -700,6 +724,7 @@ mod tests {
 					find_solution_st(WordEng::new("foobar"), WordEng::new("oobar"))
 				)
 			}
+			#[ignore = "discard solves it better"]
 			#[test]
 			fn bb() {
 				assert_eq!(
@@ -710,6 +735,7 @@ mod tests {
 					find_solution_st(WordEng::new("foobar"), WordEng::new("obar"))
 				)
 			}
+			#[ignore = "discard solves it better"]
 			#[test]
 			fn bbb() {
 				assert_eq!(
@@ -728,6 +754,7 @@ mod tests {
 					find_solution_st(WordEng::new("foobar"), WordEng::new("fooba"))
 				)
 			}
+			#[ignore = "discard solves it better"]
 			#[test]
 			fn ee() {
 				let expected_solutions = vec![
@@ -744,6 +771,7 @@ mod tests {
 				dbg!(&expected_solutions, &actual_solution);
 				assert!(expected_solutions.contains(&actual_solution))
 			}
+			#[ignore = "discard solves it better"]
 			#[test]
 			fn eee() {
 				let expected_solutions = vec![
@@ -807,6 +835,54 @@ mod tests {
 				assert_eq!(
 					vec![Swap { index1s: 3, index1e: 5, index2s: 9, index2e: 11 }],
 					find_solution_st(WordEng::new("abcfoodefbarxyz"), WordEng::new("abcbardeffooxyz"))
+				)
+			}
+		}
+
+		#[cfg(feature = "discard")]
+		mod discard {
+			use super::*;
+			use Action::Discard;
+			#[test]
+			fn b2() {
+				assert_eq!(
+					vec![Discard { index_start: 0, index_end: 1 }],
+					find_solution_st(WordEng::new("foobar"), WordEng::new("obar"))
+				)
+			}
+			#[test]
+			fn b3() {
+				assert_eq!(
+					vec![Discard { index_start: 0, index_end: 2 }],
+					find_solution_st(WordEng::new("foobar"), WordEng::new("bar"))
+				)
+			}
+			#[test]
+			fn e2() {
+				assert_eq!(
+					vec![Discard { index_start: 4, index_end: 5 }],
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foob"))
+				)
+			}
+			#[test]
+			fn e3() {
+				assert_eq!(
+					vec![Discard { index_start: 3, index_end: 5 }],
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foo"))
+				)
+			}
+			#[test]
+			fn m2() {
+				assert_eq!(
+					vec![Discard { index_start: 2, index_end: 3 }],
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foar"))
+				)
+			}
+			#[test]
+			fn m4() {
+				assert_eq!(
+					vec![Discard { index_start: 1, index_end: 4 }],
+					find_solution_st(WordEng::new("foobar"), WordEng::new("fr"))
 				)
 			}
 		}
