@@ -11,12 +11,7 @@ remove = []
 replace = []
 swap = []
 # default rules:
-default = [
-	"add",
-	"remove",
-	"replace",
-	"swap",
-]
+default = ["arrs"]
 # shortcuts for rule sets:
 ar = ["add", "remove"]
 arr = ["add", "remove", "replace"]

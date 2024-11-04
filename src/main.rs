@@ -1,4 +1,9 @@
-//! Calc Levenshtein distance between words
+//! Calc Levenshtein distance between words.
+
+#![deny(
+	unsafe_code,
+	unused_results,
+)]
 
 #![feature(
 	coroutines,
@@ -16,7 +21,7 @@ mod extensions;
 mod macros;
 mod utils_io;
 
-use extensions::VecPushed;
+use extensions::{VecPushed, ToStrings};
 use utils_io::prompt;
 
 
@@ -39,27 +44,35 @@ use utils_io::prompt;
 struct CliArgsPre {
 	/// Language: `eng` or `ukr`.
 	#[arg(short, long, default_value="eng")]
-	language_str: String,
+	language: String,
+
+	/// Word 1 , Word 2
+	#[arg(short, long)]
+	word12: Option<String>,
 }
 
 struct CliArgsPost {
 	language: Language,
+	word12: Option<[String; 2]>,
 }
 impl From<CliArgsPre> for CliArgsPost {
 	fn from(CliArgsPre {
-		language_str,
+		language,
+		word12,
 	}: CliArgsPre) -> Self {
 		Self {
-			language: match language_str.as_str() {
+			language: match language.as_str() {
 				"eng" => Language::Eng,
 				"ukr" => Language::Ukr,
 				_ => panic!()
 			},
+			word12: word12
+				.map(|word12| {
+					word12.split_once(',').unwrap().to_strings().into()
+				})
 		}
 	}
 }
-
-enum Language { Eng, Ukr }
 
 
 
@@ -69,39 +82,87 @@ fn main() {
 
 	match cli_args.language {
 		Language::Eng => {
-			let word1 = WordEng::new(&prompt("Input word 1: "));
-			let word2 = WordEng::new(&prompt("Input word 2: "));
-			let solution = find_solution_st(word1, word2.clone());
-			println!("Solution: {solution:#?}");
-			let solution_len = solution.len();
-			println!("Solution length: {}", solution_len);
-			let word2_len = word2.len();
-			println!("Length of word 2: {}", word2.chars.len());
-			let score_f = calc_score_f(word2_len, solution_len);
-			println!("Points float: {score_f}");
-			let score = calc_score(word2_len, solution_len);
-			println!("Points: {score}");
+			main_with_lang::<{Language::ENG}>(cli_args);
 		}
 		Language::Ukr => {
-			let word1 = WordUkr::new(&prompt("Введіть слово 1: "));
-			let word2 = WordUkr::new(&prompt("Введіть слово 2: "));
-			let solution = find_solution_st(word1, word2.clone());
-			println!("Розв'язок: {solution:#?}");
-			let solution_len = solution.len();
-			println!("Довжина розв'язку: {}", solution_len);
-			let word2_len = word2.len();
-			println!("Довжина слова 2: {}", word2_len);
-			let score_f = calc_score_f(word2_len, solution_len);
-			println!("Очків float: {score_f}");
-			let score = calc_score(word2_len, solution_len);
-			println!("Очків: {score}");
+			main_with_lang::<{Language::UKR}>(cli_args);
 		}
 	}
+}
+
+fn main_with_lang<const A: u8>(cli_args: CliArgsPost) {
+	struct Localization {
+		word: &'static str,
+		input_word: &'static str,
+		solution: &'static str,
+		solution_len: &'static str,
+		word_len: &'static str,
+		points_float: &'static str,
+		points: &'static str,
+	}
+	impl Localization {
+		const fn get<const A: u8>() -> Self {
+			match Language::from_index(A) {
+				Language::Eng => Self {
+					word: "Word",
+					input_word: "Input word",
+					solution: "Solution",
+					solution_len: "Solution len",
+					word_len: "Word len",
+					points_float: "Points float",
+					points: "Points",
+				},
+				Language::Ukr => Self {
+					word: "Слово",
+					input_word: "Введіть слово",
+					solution: "Розв'язок",
+					solution_len: "Довжина розв'язку",
+					word_len: "Довжина слова",
+					points_float: "Очків float",
+					points: "Очків",
+				}
+			}
+		}
+	}
+
+	fn get_word<const A: u8>(
+		cli_args: &CliArgsPost,
+		text_info_word: &str,
+		text_prompt_word: &str,
+		n: usize,
+	) -> Word<A> {
+		Word::new(&match &cli_args.word12 {
+			Some(word12) => {
+				let word_n_string = &word12[n-1];
+				println!("{text_info_word} {n}: {word_n_string}");
+				word_n_string.to_string()
+			}
+			None => prompt(&format!("{text_prompt_word} {n}: "))
+		})
+	}
+
+	let loc = Localization::get::<A>();
+	let get_word_lang = |n: usize| -> Word<A> {
+		get_word(&cli_args, loc.word, loc.input_word, n)
+	};
+	let word1 = get_word_lang(1);
+	let word2 = get_word_lang(2);
+	let word2_len = word2.len();
+	let solution = find_solution_st(word1, word2);
+	println!("{}: {solution:#?}", loc.solution);
+	let solution_len = solution.len();
+	println!("{}: {solution_len}", loc.solution_len);
+	println!("{} 2: {word2_len}", loc.word_len);
+	let score_f = calc_score_f(word2_len, solution_len);
+	println!("{}: {score_f}", loc.points_float);
+	let score = calc_score(word2_len, solution_len);
+	println!("{}: {score}", loc.points);
 }
 
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Allowed Actions aka Rules
 enum Action {
 	/* all features/rules:
 	#[cfg(feature = "add")]
@@ -164,7 +225,7 @@ impl Action {
 		self
 	}
 
-	fn is_stupid<const A: u8>(&self, word1: &Word<A>, word2: &Word<A>) -> bool {
+	fn is_vain<const A: u8>(&self, word1: &Word<A>, word2: &Word<A>) -> bool {
 		use Action::*;
 		match self {
 			// OPTIMIZATIONS 1:
@@ -179,7 +240,7 @@ impl Action {
 			#[cfg(feature = "add")]
 			Add { .. } if word2.len() == 0 => true,
 			#[cfg(feature = "remove")]
-			Remove { .. } if word2.len() == 0 => false,
+			Remove { .. } if word2.len() == 0 => false, // to avoid mistakes
 			#[cfg(feature = "replace")]
 			Replace { .. } if word2.len() == 0 => true,
 			#[cfg(feature = "swap")]
@@ -193,7 +254,7 @@ impl Action {
 
 	/// `action_prev.is_stupid_before(action_next)`
 	/// returns if `action_next` is stupid after `action_prev`.
-	fn is_stupid_before(&self, action_next: &Action) -> bool {
+	fn is_vain_with(&self, action_next: &Action) -> bool {
 		use Action::*;
 		match (self, action_next) {
 			// OPTIMIZATIONS 2:
@@ -213,20 +274,37 @@ impl Action {
 }
 
 
-const A_ENG_I: u8 = 0;
-const A_UKR_I: u8 = 1;
-const fn get_alphabet_by_index(index: u8) -> &'static str {
-	const ALPHABET_ENG: &str = "abcdefghijklmnopqrstuvwxyz";
-	const ALPHABET_UKR: &str = "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя'";
-	match index {
-		A_ENG_I => ALPHABET_ENG,
-		A_UKR_I => ALPHABET_UKR,
-		_ => panic!()
+
+enum Language { Eng, Ukr }
+impl Language {
+	const ENG: u8 = 0;
+	const UKR: u8 = 1;
+	pub const fn from_index(lang_index: u8) -> Self {
+		use Language::*;
+		match lang_index {
+			Self::ENG => Eng,
+			Self::UKR => Ukr,
+			_ => panic!()
+		}
+	}
+	pub const fn get_alphabet(&self) -> &'static str {
+		use Language::*;
+		const ALPHABET_ENG: &str = "abcdefghijklmnopqrstuvwxyz";
+		const ALPHABET_UKR: &str = "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя'";
+		match self {
+			Eng => ALPHABET_ENG,
+			Ukr => ALPHABET_UKR,
+		}
+	}
+	pub const fn get_alphabet_from_lang_index(lang_index: u8) -> &'static str {
+		Self::from_index(lang_index).get_alphabet()
 	}
 }
 
-type WordEng = Word<A_ENG_I>;
-type WordUkr = Word<A_UKR_I>;
+
+
+type WordEng = Word<{Language::ENG}>;
+type WordUkr = Word<{Language::UKR}>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Word<const A: u8> {
@@ -238,7 +316,8 @@ impl<const A: u8> Word<A> {
 	fn from(chars: &[char]) -> Self {
 		// if chars.len() == 0 || chars.len() > Self::MAX_LEN { panic!() }
 		// if chars.len() == 0 { panic!() }
-		assert!(chars.into_iter().all(|&c| get_alphabet_by_index(A).contains(c)));
+		let alphabet = Language::get_alphabet_from_lang_index(A);
+		assert!(chars.into_iter().all(|&c| alphabet.contains(c)));
 		Self { chars: chars.to_vec() }
 	}
 
@@ -256,25 +335,26 @@ impl<const A: u8> Word<A> {
 	}
 
 	fn is_legal_action(&self, action: Action) -> bool {
+		use Action::*;
 		let self_len = self.len();
 		match action {
 			#[cfg(feature = "add")]
-			Action::Add { index, char: _ } => {
+			Add { index, char: _ } => {
 				// if self_len == Self::MAX_LEN { return false }
 				if index > self_len { return false }
 			}
 			#[cfg(feature = "remove")]
-			Action::Remove { index } => {
+			Remove { index } => {
 				// if self_len == 1 { return false }
 				if index >= self_len { return false }
 			}
 			#[cfg(feature = "replace")]
-			Action::Replace { index, char } => {
-				if index > self_len { return false }
+			Replace { index, char } => {
+				if index >= self_len { return false }
 				if self.chars[index] == char { return false }
 			}
 			#[cfg(feature = "swap")]
-			Action::Swap { index1s, index1e, index2s, index2e } => {
+			Swap { index1s, index1e, index2s, index2e } => {
 				if index1s >= self_len { return false }
 				if index1e >= self_len { return false }
 				if index2s >= self_len { return false }
@@ -292,23 +372,24 @@ impl<const A: u8> Word<A> {
 	}
 
 	fn apply_action_mut(&mut self, action: Action) {
+		use Action::*;
 		if !self.is_legal_action(action) { panic!("self={self:?}\naction={action:?}") }
 		// dbg!(action);
 		match action {
 			#[cfg(feature = "add")]
-			Action::Add { char, index } => {
+			Add { char, index } => {
 				self.chars.insert(index, char);
 			}
 			#[cfg(feature = "remove")]
-			Action::Remove { index } => {
-				self.chars.remove(index);
+			Remove { index } => {
+				let _ = self.chars.remove(index);
 			}
 			#[cfg(feature = "replace")]
-			Action::Replace { index, char } => {
+			Replace { index, char } => {
 				self.chars[index] = char;
 			}
 			#[cfg(feature = "swap")]
-			Action::Swap { index1s, index1e, index2s, index2e } => {
+			Swap { index1s, index1e, index2s, index2e } => {
 				let before = &self.chars[..index1s];
 				let part_1 = &self.chars[index1s..=index1e];
 				let middle = &self.chars[index1e+1..index2s];
@@ -323,37 +404,38 @@ impl<const A: u8> Word<A> {
 		}
 	}
 
-	fn all_actions(self) -> impl Iterator<Item=Action> {
+	fn all_actions_iter_by_coroutine(self) -> impl Iterator<Item=Action> {
+		use Action::*;
 		from_coroutine(#[coroutine] move || {
 			let len = self.len();
-			let alphabet = get_alphabet_by_index(A);
+			let alphabet = Language::get_alphabet_from_lang_index(A);
 
-			#[cfg(feature = "add")]
+			#[cfg(feature = "add")] // COMPLEXITY: (L+1) * A
 			for index in 0..=len {
 				for char in alphabet.chars() {
-					yield Action::Add { char, index }
+					yield Add { char, index }
 				}
 			}
 
-			#[cfg(feature = "remove")]
+			#[cfg(feature = "remove")] // COMPLEXITY: L
 			for index in 0..len {
-				yield Action::Remove { index }
+				yield Remove { index }
 			}
 
-			#[cfg(feature = "replace")]
+			#[cfg(feature = "replace")] // COMPLEXITY: L * A
 			for index in 0..len {
 				for char in alphabet.chars() {
 					if self.chars[index] == char { continue }
-					yield Action::Replace { char, index }
+					yield Replace { char, index }
 				}
 			}
 
-			#[cfg(feature = "swap")]
+			#[cfg(feature = "swap")] // COMPLEXITY: ~ L^4
 			for index1s in 0..len {
 				for index1e in index1s..len {
 					for index2s in index1e+1..len {
 						for index2e in index2s..len {
-							yield Action::Swap { index1s, index1e, index2s, index2e }
+							yield Swap { index1s, index1e, index2s, index2e }
 						}
 					}
 				}
@@ -363,7 +445,7 @@ impl<const A: u8> Word<A> {
 
 	fn dropped_at_index(&self, index: usize) -> Self {
 		let mut self_ = self.clone();
-		self_.chars.remove(index);
+		let _ = self_.chars.remove(index);
 		self_
 	}
 
@@ -428,11 +510,11 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 			// dbg!(&word, &word_target, &actions);
 			match calc_common_prefix_and_suffix_len(&word, &word_target) {
 				PrefixSuffixLen { prefix_len: 0, suffix_len: 0 } => {
-					for action in word.clone().all_actions() {
+					for action in word.clone().all_actions_iter_by_coroutine() {
 						// use optimizations 1:
-						if action.is_stupid(&word, &word_target) { continue }
+						if action.is_vain(&word, &word_target) { continue }
 						// use optimizations 2:
-						if let Some(action_prev) = actions.last() && action_prev.is_stupid_before(&action) { continue }
+						if let Some(action_prev) = actions.last() && action_prev.is_vain_with(&action) { continue }
 						let new_word = word.apply_action(action);
 						// dbg!(&new_word);
 						let new_actions = actions.clone().pushed_opt(action);
@@ -524,9 +606,7 @@ mod tests {
 			#[test]
 			fn b() {
 				assert_eq!(
-					vec![
-						Add { char: 'x', index: 0 },
-					],
+					vec![Add { char: 'x', index: 0 }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("xfoobar"))
 				)
 			}
@@ -554,9 +634,7 @@ mod tests {
 			#[test]
 			fn e() {
 				assert_eq!(
-					vec![
-						Add { char: 'x', index: 6 },
-					],
+					vec![Add { char: 'x', index: 6 }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarx"))
 				)
 			}
@@ -584,9 +662,7 @@ mod tests {
 			#[test]
 			fn m() {
 				assert_eq!(
-					vec![
-						Add { char: 'x', index: 3 },
-					],
+					vec![Add { char: 'x', index: 3 }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxbar"))
 				)
 			}
@@ -620,9 +696,7 @@ mod tests {
 			#[test]
 			fn b() {
 				assert_eq!(
-					vec![
-						Remove { index: 0 },
-					],
+					vec![Remove { index: 0 }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("oobar"))
 				)
 			}
@@ -650,47 +724,43 @@ mod tests {
 			#[test]
 			fn e() {
 				assert_eq!(
-					vec![
-						Remove { index: 5 },
-					],
+					vec![Remove { index: 5 }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("fooba"))
 				)
 			}
 			#[test]
 			fn ee() {
-				assert!(
-					vec![ // solutions:
-						vec![
-							Remove { index: 5 },
-							Remove { index: 4 },
-						],
-						vec![
-							Remove { index: 4 },
-							Remove { index: 4 },
-						],
-					].contains(
-						&find_solution_st(WordEng::new("foobar"), WordEng::new("foob"))
-					)
-				)
+				let expected_solutions = vec![
+					vec![
+						Remove { index: 5 },
+						Remove { index: 4 },
+					],
+					vec![
+						Remove { index: 4 },
+						Remove { index: 4 },
+					],
+				];
+				let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foob"));
+				dbg!(&expected_solutions, &actual_solution);
+				assert!(expected_solutions.contains(&actual_solution))
 			}
 			#[test]
 			fn eee() {
-				assert!(
-					vec![ // solutions:
-						vec![
-							Remove { index: 5 },
-							Remove { index: 4 },
-							Remove { index: 3 },
-						],
-						vec![
-							Remove { index: 3 },
-							Remove { index: 3 },
-							Remove { index: 3 },
-						],
-					].contains(
-						&find_solution_st(WordEng::new("foobar"), WordEng::new("foo"))
-					)
-				)
+				let expected_solutions = vec![
+					vec![
+						Remove { index: 5 },
+						Remove { index: 4 },
+						Remove { index: 3 },
+					],
+					vec![
+						Remove { index: 3 },
+						Remove { index: 3 },
+						Remove { index: 3 },
+					],
+				];
+				let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foo"));
+				dbg!(&expected_solutions, &actual_solution);
+				assert!(expected_solutions.contains(&actual_solution))
 			}
 		}
 
@@ -701,27 +771,21 @@ mod tests {
 			#[test]
 			fn b() {
 				assert_eq!(
-					vec![
-						Replace { index: 0, char: 'x' },
-					],
+					vec![Replace { index: 0, char: 'x' }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("xoobar"))
 				)
 			}
 			#[test]
 			fn e() {
 				assert_eq!(
-					vec![
-						Replace { index: 5, char: 'x' },
-					],
+					vec![Replace { index: 5, char: 'x' }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("foobax"))
 				)
 			}
 			#[test]
 			fn m() {
 				assert_eq!(
-					vec![
-						Replace { index: 2, char: 'x' },
-					],
+					vec![Replace { index: 2, char: 'x' }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("foxbar"))
 				)
 			}
@@ -734,18 +798,14 @@ mod tests {
 			#[test]
 			fn foobar_barfoo() {
 				assert_eq!(
-					vec![
-						Swap { index1s: 0, index1e: 2, index2s: 3, index2e: 5 },
-					], //                          012345                  012345
+					vec![Swap { index1s: 0, index1e: 2, index2s: 3, index2e: 5 }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoo"))
 				)
 			}
 			#[test]
 			fn abcfoodefbarxyz_abcbardeffooxyz() {
 				assert_eq!(
-					vec![
-						Swap { index1s: 3, index1e: 5, index2s: 9, index2e: 11 },
-					], //                          012345678901234                  012345678901234
+					vec![Swap { index1s: 3, index1e: 5, index2s: 9, index2e: 11 }],
 					find_solution_st(WordEng::new("abcfoodefbarxyz"), WordEng::new("abcbardeffooxyz"))
 				)
 			}
@@ -774,8 +834,7 @@ mod tests {
 				&WordEng::new("kzko"),
 				&WordEng::new("ko")
 			);
-			dbg!(expected_solutions);
-			dbg!(actual_solution);
+			dbg!(expected_solutions, actual_solution);
 			assert!(expected_solutions.contains(&actual_solution))
 		}
 		#[test]

@@ -27,7 +27,7 @@ pub fn prompt(text: &str) -> String {
 	use std::io::{BufRead, stdin};
 	print(text);
 	let mut line = String::new();
-	stdin().lock().read_line(&mut line).expect("Could not read line");
+	let _ = stdin().lock().read_line(&mut line).expect("Could not read line");
 	line.trim().to_string()
 }
 
