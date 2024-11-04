@@ -170,6 +170,7 @@ enum Action {
 	#[cfg(feature = "replace")]
 	#[cfg(feature = "swap")]
 	#[cfg(feature = "discard")]
+	#[cfg(feature = "copy")]
 	*/
 
 	#[cfg(feature = "add")]
@@ -192,8 +193,9 @@ enum Action {
 	/// start and end indices are including
 	Discard { index_start: usize, index_end: usize },
 
-	// #[cfg(feature = "copy")]
-	// Copy { index_start: usize, index_end: usize, index_insert: usize },
+	#[cfg(feature = "copy")]
+	/// start and end indices are including
+	Copy_ { index_start: usize, index_end: usize, index_insert: usize },
 }
 
 impl Action {
@@ -223,6 +225,12 @@ impl Action {
 			Discard { index_start, index_end } => {
 				*index_start += shift;
 				*index_end   += shift;
+			}
+			#[cfg(feature = "copy")]
+			Copy_ { index_start, index_end, index_insert } => {
+				*index_start  += shift;
+				*index_end    += shift;
+				*index_insert += shift;
 			}
 		}
 	}
@@ -374,6 +382,13 @@ impl<const A: u8> Word<A> {
 				if index_end   >= self_len { return false }
 				if !(index_start <= index_end) { return false }
 			}
+			#[cfg(feature = "copy")]
+			Copy_ { index_start, index_end, index_insert } => {
+				if index_start  >= self_len { return false }
+				if index_end    >= self_len { return false }
+				if index_insert >= self_len { return false }
+				if !(index_start <= index_end) { return false }
+			}
 		}
 		true
 	}
@@ -418,6 +433,13 @@ impl<const A: u8> Word<A> {
 			Discard { index_start, index_end } => {
 				let _ = self.chars.drain(index_start..=index_end);
 			}
+			#[cfg(feature = "copy")]
+			Copy_ { index_start, index_end, index_insert } => {
+				let _ = self.chars.splice(
+					index_insert..index_insert,
+					self.chars[index_start..=index_end].to_vec()
+				);
+			}
 		}
 	}
 
@@ -451,6 +473,15 @@ impl<const A: u8> Word<A> {
 				for char in alphabet.chars() {
 					if self.chars[index] == char { continue }
 					yield Replace { char, index }
+				}
+			}
+
+			#[cfg(feature = "copy")] // COMPLEXITY: ~L^3
+			for index_start in 0..len {
+				for index_end in index_start+1..len {
+					for index_insert in 0..=len {
+						yield Copy_ { index_start, index_end, index_insert }
+					}
 				}
 			}
 
@@ -883,6 +914,39 @@ mod tests {
 				assert_eq!(
 					vec![Discard { index_start: 1, index_end: 4 }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("fr"))
+				)
+			}
+		}
+
+		#[cfg(feature = "copy")]
+		mod copy {
+			use super::*;
+			use Action::Copy_;
+			#[test]
+			fn foo_foofoo() {
+				let expected_solutions = [
+					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 0 }],
+					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 3 }],
+				];
+				let actual_solution = find_solution_st(
+					WordEng::new("foo"),
+					WordEng::new("foofoo")
+				);
+				dbg!(&expected_solutions, &actual_solution);
+				assert!(expected_solutions.contains(&actual_solution))
+			}
+			#[test]
+			fn foobar_foobarfoo() {
+				assert_eq!(
+					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 6 }],
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarfoo"))
+				)
+			}
+			#[test]
+			fn foobar_barfoobar() {
+				assert_eq!(
+					vec![Copy_ { index_start: 3, index_end: 5, index_insert: 0 }],
+					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoobar"))
 				)
 			}
 		}
