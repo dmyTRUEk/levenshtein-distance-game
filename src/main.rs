@@ -33,13 +33,13 @@ mod utils_io;
 #[cfg(feature="aa_by_coroutine")]
 mod aa_by_coroutine;
 
-#[cfg(any(feature="aa_by_vec", feature="aa_by_vec_sorted_by_priority"))]
+#[cfg(any(feature="aa_by_vec", feature="aa_by_vec_sbp"))]
 mod aa_by_vec;
 
 #[cfg(feature="aa_by_gen_block")]
 mod aa_by_gen_block;
 
-#[cfg(feature="aa_by_vec_sorted_by_priority")]
+#[cfg(feature="aa_by_vec_sbp")]
 mod aa_by_vec_sorted_by_priority;
 
 #[cfg(feature="aa_by_gen_fn")]
@@ -104,7 +104,7 @@ impl From<CliArgsPre> for CliArgsPost {
 	feature="aa_by_coroutine",
 	feature="aa_by_vec",
 	feature="aa_by_gen_block",
-	feature="aa_by_vec_sorted_by_priority",
+	feature="aa_by_vec_sbp",
 	feature="aa_by_gen_fn",
 )))]
 compile_error!("One of `aa_by_*` features must be enabled");
@@ -113,7 +113,7 @@ assert_unique_feature!(
 	"aa_by_coroutine",
 	"aa_by_vec",
 	"aa_by_gen_block",
-	"aa_by_vec_sorted_by_priority",
+	"aa_by_vec_sbp",
 	"aa_by_gen_fn",
 );
 
@@ -584,7 +584,7 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 						let iter = word.clone().all_actions_vec();
 						#[cfg(feature="aa_by_gen_block")]
 						let iter = word.clone().all_actions_iter_by_gen_block();
-						#[cfg(feature="aa_by_vec_sorted_by_priority")]
+						#[cfg(feature="aa_by_vec_sbp")]
 						let iter = word.clone().all_actions_vec_sorted_by_priority();
 						#[cfg(feature="aa_by_gen_fn")]
 						let iter = word.clone().all_actions_iter_by_gen_fn();
