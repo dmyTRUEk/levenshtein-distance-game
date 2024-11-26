@@ -8,6 +8,10 @@ edition = "2021"
 authors = ["dmyTRUEk"]
 
 [features]
+default = [
+	"arrsdt",
+	"aa_by_vec",
+]
 # rules:
 add = []
 remove = []
@@ -16,11 +20,6 @@ swap = []
 discard = []
 copy = []
 take = []
-# default rules:
-default = [
-	"arrsdt",
-	"aa_by_vec",
-]
 # shortcuts for rule sets:
 ar = ["add", "remove"]
 arr = ["add", "remove", "replace"]
