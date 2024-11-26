@@ -5,9 +5,10 @@
 	unused_results,
 )]
 
-#![feature(
-	let_chains,
-)]
+// TODO
+// #![feature(
+// 	let_chains,
+// )]
 
 #![cfg_attr(
 	feature="aa_by_coroutine",
@@ -589,7 +590,8 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 						// use optimizations 1:
 						if action.is_vain(&word, &word_target) { continue }
 						// use optimizations 2:
-						if let Some(action_prev) = actions.last() && action_prev.is_vain_with(&action) { continue }
+						// if let Some(action_prev) = actions.last() && action_prev.is_vain_with(&action) { continue } // TODO
+						if actions.last().is_some_and(|action_prev| action_prev.is_vain_with(&action)) { continue }
 						let new_word = word.apply_action(action);
 						// dbg!(&new_word);
 						let new_actions = actions.clone().pushed_opt(action);
