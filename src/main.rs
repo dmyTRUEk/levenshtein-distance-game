@@ -100,23 +100,26 @@ impl From<CliArgsPre> for CliArgsPost {
 
 
 
-fn main() {
-	#[cfg(not(any(
-		feature="aa_by_coroutine",
-		feature="aa_by_vec",
-		feature="aa_by_gen_block",
-		feature="aa_by_vec_sorted_by_priority",
-		feature="aa_by_gen_fn",
-	)))]
-	compile_error!("One of `aa_by_*` features must be enabled");
-	assert_unique_feature!(
-		"aa_by_coroutine",
-		"aa_by_vec",
-		"aa_by_gen_block",
-		"aa_by_vec_sorted_by_priority",
-		"aa_by_gen_fn",
-	);
+#[cfg(not(any(
+	feature="aa_by_coroutine",
+	feature="aa_by_vec",
+	feature="aa_by_gen_block",
+	feature="aa_by_vec_sorted_by_priority",
+	feature="aa_by_gen_fn",
+)))]
+compile_error!("One of `aa_by_*` features must be enabled");
 
+assert_unique_feature!(
+	"aa_by_coroutine",
+	"aa_by_vec",
+	"aa_by_gen_block",
+	"aa_by_vec_sorted_by_priority",
+	"aa_by_gen_fn",
+);
+
+
+
+fn main() {
 	let cli_args = CliArgsPre::parse();
 	let cli_args = CliArgsPost::from(cli_args);
 
