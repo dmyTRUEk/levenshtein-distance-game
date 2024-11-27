@@ -907,469 +907,470 @@ fn calc_score(word2_len: usize, solution_len: usize) -> u8 {
 
 
 
+
+
+// TESTS:
+
+type WordEng = Word<{Language::ENG}>;
+// type WordUkr = Word<{Language::UKR}>;
+
 #[cfg(test)]
-mod tests {
+mod find_solution {
 	use super::*;
 
-	type WordEng = Word<{Language::ENG}>;
-	// type WordUkr = Word<{Language::UKR}>;
+	#[test]
+	fn trivial() {
+		assert_eq!(
+			Vec::<Action>::new(),
+			find_solution_st(WordEng::new("foobar"), WordEng::new("foobar"), None)
+		)
+	}
 
-	mod find_solution {
+	#[cfg(feature="add")]
+	mod add {
 		use super::*;
-
+		use Action::Add;
 		#[test]
-		fn trivial() {
+		fn b() {
 			assert_eq!(
-				Vec::<Action>::new(),
-				find_solution_st(WordEng::new("foobar"), WordEng::new("foobar"), None)
+				vec![Add { index: 0, char: 'x' }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("xfoobar"), None)
 			)
 		}
-
-		#[cfg(feature="add")]
-		mod add {
-			use super::*;
-			use Action::Add;
-			#[test]
-			fn b() {
-				assert_eq!(
-					vec![Add { index: 0, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("xfoobar"), None)
-				)
-			}
-			#[test]
-			fn bb() {
-				assert_eq!(
-					vec![
-						Add { index: 0, char: 'x' },
-						Add { index: 0, char: 'y' },
-					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("yxfoobar"), None)
-				)
-			}
-			#[test]
-			fn bbb() {
-				assert_eq!(
-					vec![
-						Add { index: 0, char: 'x' },
-						Add { index: 0, char: 'y' },
-						Add { index: 0, char: 'z' },
-					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("zyxfoobar"), None)
-				)
-			}
-			#[test]
-			fn e() {
-				assert_eq!(
-					vec![Add { index: 6, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarx"), None)
-				)
-			}
-			#[test]
-			fn ee() {
-				assert_eq!(
-					vec![
-						Add { index: 6, char: 'x' },
-						Add { index: 7, char: 'y' },
-					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxy"), None)
-				)
-			}
-			#[test]
-			fn eee() {
-				assert_eq!(
-					vec![
-						Add { index: 6, char: 'x' },
-						Add { index: 7, char: 'y' },
-						Add { index: 8, char: 'z' },
-					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxyz"), None)
-				)
-			}
-			#[test]
-			fn m() {
-				assert_eq!(
-					vec![Add { index: 3, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxbar"), None)
-				)
-			}
-			#[test]
-			fn mm() {
-				assert_eq!(
-					vec![
-						Add { index: 3, char: 'x' },
-						Add { index: 4, char: 'y' },
-					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxybar"), None)
-				)
-			}
-			#[test]
-			fn mmm() {
-				assert_eq!(
-					vec![
-						Add { index: 3, char: 'x' },
-						Add { index: 4, char: 'y' },
-						Add { index: 5, char: 'z' },
-					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxyzbar"), None)
-				)
-			}
+		#[test]
+		fn bb() {
+			assert_eq!(
+				vec![
+					Add { index: 0, char: 'x' },
+					Add { index: 0, char: 'y' },
+				],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("yxfoobar"), None)
+			)
 		}
-
-		#[cfg(feature="remove")]
-		mod remove {
-			use super::*;
-			use Action::Remove;
-			#[test]
-			fn b() {
-				assert_eq!(
-					vec![Remove { index: 0 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("oobar"), None)
-				)
-			}
-			#[ignore = "discard solves it better"]
-			#[test]
-			fn bb() {
-				assert_eq!(
-					vec![
-						Remove { index: 0 },
-						Remove { index: 0 },
-					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("obar"), None)
-				)
-			}
-			#[ignore = "discard solves it better"]
-			#[test]
-			fn bbb() {
-				assert_eq!(
-					vec![
-						Remove { index: 0 },
-						Remove { index: 0 },
-						Remove { index: 0 },
-					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("bar"), None)
-				)
-			}
-			#[test]
-			fn e() {
-				assert_eq!(
-					vec![Remove { index: 5 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fooba"), None)
-				)
-			}
-			#[ignore = "discard solves it better"]
-			#[test]
-			fn ee() {
-				let expected_solutions = vec![
-					vec![
-						Remove { index: 5 },
-						Remove { index: 4 },
-					],
-					vec![
-						Remove { index: 4 },
-						Remove { index: 4 },
-					],
-				];
-				let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foob"), None);
-				dbg!(&expected_solutions, &actual_solution);
-				assert!(expected_solutions.contains(&actual_solution))
-			}
-			#[ignore = "discard solves it better"]
-			#[test]
-			fn eee() {
-				let expected_solutions = vec![
-					vec![
-						Remove { index: 5 },
-						Remove { index: 4 },
-						Remove { index: 3 },
-					],
-					vec![
-						Remove { index: 3 },
-						Remove { index: 3 },
-						Remove { index: 3 },
-					],
-				];
-				let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foo"), None);
-				dbg!(&expected_solutions, &actual_solution);
-				assert!(expected_solutions.contains(&actual_solution))
-			}
+		#[test]
+		fn bbb() {
+			assert_eq!(
+				vec![
+					Add { index: 0, char: 'x' },
+					Add { index: 0, char: 'y' },
+					Add { index: 0, char: 'z' },
+				],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("zyxfoobar"), None)
+			)
 		}
-
-		#[cfg(feature="replace")]
-		mod replace {
-			use super::*;
-			use Action::Replace;
-			#[test]
-			fn b() {
-				assert_eq!(
-					vec![Replace { index: 0, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("xoobar"), None)
-				)
-			}
-			#[test]
-			fn e() {
-				assert_eq!(
-					vec![Replace { index: 5, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobax"), None)
-				)
-			}
-			#[test]
-			fn m() {
-				assert_eq!(
-					vec![Replace { index: 2, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foxbar"), None)
-				)
-			}
+		#[test]
+		fn e() {
+			assert_eq!(
+				vec![Add { index: 6, char: 'x' }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foobarx"), None)
+			)
 		}
-
-		#[cfg(feature="swap")]
-		mod swap {
-			use super::*;
-			use Action::Swap;
-			#[test]
-			fn foobar_barfoo() {
-				assert_eq!(
-					vec![Swap { index1s: 0, index1e: 2, index2s: 3, index2e: 5 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoo"), None)
-				)
-			}
-			#[test]
-			fn abcfoodefbarxyz_abcbardeffooxyz() {
-				assert_eq!(
-					vec![Swap { index1s: 3, index1e: 5, index2s: 9, index2e: 11 }],
-					find_solution_st(WordEng::new("abcfoodefbarxyz"), WordEng::new("abcbardeffooxyz"), None)
-				)
-			}
+		#[test]
+		fn ee() {
+			assert_eq!(
+				vec![
+					Add { index: 6, char: 'x' },
+					Add { index: 7, char: 'y' },
+				],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxy"), None)
+			)
 		}
-
-		#[cfg(feature="discard")]
-		mod discard {
-			use super::*;
-			use Action::Discard;
-			#[test]
-			fn b2() {
-				assert_eq!(
-					vec![Discard { index_start: 0, index_end: 1 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("obar"), None)
-				)
-			}
-			#[test]
-			fn b3() {
-				assert_eq!(
-					vec![Discard { index_start: 0, index_end: 2 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("bar"), None)
-				)
-			}
-			#[test]
-			fn e2() {
-				assert_eq!(
-					vec![Discard { index_start: 4, index_end: 5 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foob"), None)
-				)
-			}
-			#[test]
-			fn e3() {
-				assert_eq!(
-					vec![Discard { index_start: 3, index_end: 5 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foo"), None)
-				)
-			}
-			#[test]
-			fn m2() {
-				assert_eq!(
-					vec![Discard { index_start: 2, index_end: 3 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foar"), None)
-				)
-			}
-			#[test]
-			fn m4() {
-				assert_eq!(
-					vec![Discard { index_start: 1, index_end: 4 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fr"), None)
-				)
-			}
+		#[test]
+		fn eee() {
+			assert_eq!(
+				vec![
+					Add { index: 6, char: 'x' },
+					Add { index: 7, char: 'y' },
+					Add { index: 8, char: 'z' },
+				],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxyz"), None)
+			)
 		}
-
-		#[cfg(feature="take")]
-		mod take {
-			use super::*;
-			use Action::Take;
-			#[test]
-			fn foobarxyz_foo() {
-				assert_eq!(
-					vec![Take { index_start: 3, index_end: 5 }],
-					find_solution_st(WordEng::new("foobarxyz"), WordEng::new("bar"), None)
-				)
-			}
+		#[test]
+		fn m() {
+			assert_eq!(
+				vec![Add { index: 3, char: 'x' }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("fooxbar"), None)
+			)
 		}
-
-		#[cfg(feature="copy")]
-		mod copy {
-			use super::*;
-			use Action::Copy_;
-			#[test]
-			fn abcd_ababcdcd() {
-				assert_eq!(
-					vec![Copy_ { index_start: 0, index_end: 3, index_insert: 2 }],
-					find_solution_st(WordEng::new("abcd"), WordEng::new("ababcdcd"), None)
-				)
-			}
-			#[test]
-			fn foo_foofoo() {
-				let expected_solutions = [
-					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 0 }],
-					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 3 }],
-				];
-				let actual_solution = find_solution_st(WordEng::new("foo"), WordEng::new("foofoo"), None);
-				dbg!(&expected_solutions, &actual_solution);
-				assert!(expected_solutions.contains(&actual_solution))
-			}
-			#[test]
-			fn foobar_foobarfoo() {
-				assert_eq!(
-					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 6 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarfoo"), None)
-				)
-			}
-			#[test]
-			fn foobar_barfoobar() {
-				assert_eq!(
-					vec![Copy_ { index_start: 3, index_end: 5, index_insert: 0 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoobar"), None)
-				)
-			}
+		#[test]
+		fn mm() {
+			assert_eq!(
+				vec![
+					Add { index: 3, char: 'x' },
+					Add { index: 4, char: 'y' },
+				],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("fooxybar"), None)
+			)
+		}
+		#[test]
+		fn mmm() {
+			assert_eq!(
+				vec![
+					Add { index: 3, char: 'x' },
+					Add { index: 4, char: 'y' },
+					Add { index: 5, char: 'z' },
+				],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("fooxyzbar"), None)
+			)
 		}
 	}
 
-	mod calc_common_prefix_and_suffix_len {
+	#[cfg(feature="remove")]
+	mod remove {
 		use super::*;
+		use Action::Remove;
 		#[test]
-		fn abcxyzdefgh_abcvdefgh() {
+		fn b() {
 			assert_eq!(
-				PrefixSuffixLen { prefix_len: 3, suffix_len: 5 },
-				calc_common_prefix_and_suffix_len(
-					&WordEng::new("abcxyzdefgh"),
-					&WordEng::new("abcvdefgh")
-				)
+				vec![Remove { index: 0 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("oobar"), None)
+			)
+		}
+		#[ignore = "discard solves it better"]
+		#[test]
+		fn bb() {
+			assert_eq!(
+				vec![
+					Remove { index: 0 },
+					Remove { index: 0 },
+				],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("obar"), None)
+			)
+		}
+		#[ignore = "discard solves it better"]
+		#[test]
+		fn bbb() {
+			assert_eq!(
+				vec![
+					Remove { index: 0 },
+					Remove { index: 0 },
+					Remove { index: 0 },
+				],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("bar"), None)
 			)
 		}
 		#[test]
-		fn kzko_ko() {
-			let expected_solutions = [
-				PrefixSuffixLen { prefix_len: 0, suffix_len: 2 },
-				PrefixSuffixLen { prefix_len: 1, suffix_len: 1 },
+		fn e() {
+			assert_eq!(
+				vec![Remove { index: 5 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("fooba"), None)
+			)
+		}
+		#[ignore = "discard solves it better"]
+		#[test]
+		fn ee() {
+			let expected_solutions = vec![
+				vec![
+					Remove { index: 5 },
+					Remove { index: 4 },
+				],
+				vec![
+					Remove { index: 4 },
+					Remove { index: 4 },
+				],
 			];
-			let actual_solution = calc_common_prefix_and_suffix_len(
-				&WordEng::new("kzko"),
-				&WordEng::new("ko")
-			);
-			dbg!(expected_solutions, actual_solution);
+			let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foob"), None);
+			dbg!(&expected_solutions, &actual_solution);
+			assert!(expected_solutions.contains(&actual_solution))
+		}
+		#[ignore = "discard solves it better"]
+		#[test]
+		fn eee() {
+			let expected_solutions = vec![
+				vec![
+					Remove { index: 5 },
+					Remove { index: 4 },
+					Remove { index: 3 },
+				],
+				vec![
+					Remove { index: 3 },
+					Remove { index: 3 },
+					Remove { index: 3 },
+				],
+			];
+			let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foo"), None);
+			dbg!(&expected_solutions, &actual_solution);
+			assert!(expected_solutions.contains(&actual_solution))
+		}
+	}
+
+	#[cfg(feature="replace")]
+	mod replace {
+		use super::*;
+		use Action::Replace;
+		#[test]
+		fn b() {
+			assert_eq!(
+				vec![Replace { index: 0, char: 'x' }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("xoobar"), None)
+			)
+		}
+		#[test]
+		fn e() {
+			assert_eq!(
+				vec![Replace { index: 5, char: 'x' }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foobax"), None)
+			)
+		}
+		#[test]
+		fn m() {
+			assert_eq!(
+				vec![Replace { index: 2, char: 'x' }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foxbar"), None)
+			)
+		}
+	}
+
+	#[cfg(feature="swap")]
+	mod swap {
+		use super::*;
+		use Action::Swap;
+		#[test]
+		fn foobar_barfoo() {
+			assert_eq!(
+				vec![Swap { index1s: 0, index1e: 2, index2s: 3, index2e: 5 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("barfoo"), None)
+			)
+		}
+		#[test]
+		fn abcfoodefbarxyz_abcbardeffooxyz() {
+			assert_eq!(
+				vec![Swap { index1s: 3, index1e: 5, index2s: 9, index2e: 11 }],
+				find_solution_st(WordEng::new("abcfoodefbarxyz"), WordEng::new("abcbardeffooxyz"), None)
+			)
+		}
+	}
+
+	#[cfg(feature="discard")]
+	mod discard {
+		use super::*;
+		use Action::Discard;
+		#[test]
+		fn b2() {
+			assert_eq!(
+				vec![Discard { index_start: 0, index_end: 1 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("obar"), None)
+			)
+		}
+		#[test]
+		fn b3() {
+			assert_eq!(
+				vec![Discard { index_start: 0, index_end: 2 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("bar"), None)
+			)
+		}
+		#[test]
+		fn e2() {
+			assert_eq!(
+				vec![Discard { index_start: 4, index_end: 5 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foob"), None)
+			)
+		}
+		#[test]
+		fn e3() {
+			assert_eq!(
+				vec![Discard { index_start: 3, index_end: 5 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foo"), None)
+			)
+		}
+		#[test]
+		fn m2() {
+			assert_eq!(
+				vec![Discard { index_start: 2, index_end: 3 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foar"), None)
+			)
+		}
+		#[test]
+		fn m4() {
+			assert_eq!(
+				vec![Discard { index_start: 1, index_end: 4 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("fr"), None)
+			)
+		}
+	}
+
+	#[cfg(feature="take")]
+	mod take {
+		use super::*;
+		use Action::Take;
+		#[test]
+		fn foobarxyz_foo() {
+			assert_eq!(
+				vec![Take { index_start: 3, index_end: 5 }],
+				find_solution_st(WordEng::new("foobarxyz"), WordEng::new("bar"), None)
+			)
+		}
+	}
+
+	#[cfg(feature="copy")]
+	mod copy {
+		use super::*;
+		use Action::Copy_;
+		#[test]
+		fn abcd_ababcdcd() {
+			assert_eq!(
+				vec![Copy_ { index_start: 0, index_end: 3, index_insert: 2 }],
+				find_solution_st(WordEng::new("abcd"), WordEng::new("ababcdcd"), None)
+			)
+		}
+		#[test]
+		fn foo_foofoo() {
+			let expected_solutions = [
+				vec![Copy_ { index_start: 0, index_end: 2, index_insert: 0 }],
+				vec![Copy_ { index_start: 0, index_end: 2, index_insert: 3 }],
+			];
+			let actual_solution = find_solution_st(WordEng::new("foo"), WordEng::new("foofoo"), None);
+			dbg!(&expected_solutions, &actual_solution);
 			assert!(expected_solutions.contains(&actual_solution))
 		}
 		#[test]
-		fn kzz_k() {
+		fn foobar_foobarfoo() {
 			assert_eq!(
-				PrefixSuffixLen { prefix_len: 1, suffix_len: 0 },
-				calc_common_prefix_and_suffix_len(
-					&WordEng::new("kzz"),
-					&WordEng::new("k")
-				)
+				vec![Copy_ { index_start: 0, index_end: 2, index_insert: 6 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foobarfoo"), None)
 			)
 		}
 		#[test]
-		fn zzk_k() {
+		fn foobar_barfoobar() {
 			assert_eq!(
-				PrefixSuffixLen { prefix_len: 0, suffix_len: 1 },
-				calc_common_prefix_and_suffix_len(
-					&WordEng::new("zzk"),
-					&WordEng::new("k")
-				)
+				vec![Copy_ { index_start: 3, index_end: 5, index_insert: 0 }],
+				find_solution_st(WordEng::new("foobar"), WordEng::new("barfoobar"), None)
 			)
-		}
-	}
-
-	mod random_search {
-		use super::*;
-		mod stability {
-			use super::*;
-			mod from_same {
-				use super::*;
-				#[test]
-				fn empty() {
-					let word = WordEng::new("");
-					for _ in 0..10_000 {
-						let random_action = word.gen_random_legal_action();
-						let _new_word = word.apply_action(random_action);
-					}
-				}
-				#[test]
-				fn a() {
-					let word = WordEng::new("a");
-					for _ in 0..10_000 {
-						let random_action = word.gen_random_legal_action();
-						let _new_word = word.apply_action(random_action);
-					}
-				}
-				#[test]
-				fn ab() {
-					let word = WordEng::new("ab");
-					for _ in 0..100_000 {
-						let random_action = word.gen_random_legal_action();
-						let _new_word = word.apply_action(random_action);
-					}
-				}
-				#[test]
-				fn abc() {
-					let word = WordEng::new("abc");
-					for _ in 0..1_000_000 {
-						let random_action = word.gen_random_legal_action();
-						let _new_word = word.apply_action(random_action);
-					}
-				}
-			}
-			mod chain {
-				use super::*;
-				#[test]
-				fn empty() {
-					let mut word = WordEng::new("");
-					for _ in 0..10_000 {
-						let random_action = word.gen_random_legal_action();
-						word.apply_action_mut(random_action);
-					}
-				}
-				#[test]
-				fn a() {
-					let mut word = WordEng::new("a");
-					for _ in 0..10_000 {
-						let random_action = word.gen_random_legal_action();
-						word.apply_action_mut(random_action);
-					}
-				}
-				#[test]
-				fn ab() {
-					let mut word = WordEng::new("ab");
-					for _ in 0..10_000 {
-						let random_action = word.gen_random_legal_action();
-						word.apply_action_mut(random_action);
-					}
-				}
-				#[test]
-				fn abc() {
-					let mut word = WordEng::new("abc");
-					for _ in 0..10_000 {
-						let random_action = word.gen_random_legal_action();
-						word.apply_action_mut(random_action);
-					}
-				}
-			}
-		}
-		mod completeness {
-			use super::*;
-			#[ignore = "TODO"]
-			#[test]
-			fn todo() {
-				todo!()
-			}
 		}
 	}
 }
 
+#[cfg(test)]
+mod calc_common_prefix_and_suffix_len {
+	use super::*;
+	#[test]
+	fn abcxyzdefgh_abcvdefgh() {
+		assert_eq!(
+			PrefixSuffixLen { prefix_len: 3, suffix_len: 5 },
+			calc_common_prefix_and_suffix_len(
+				&WordEng::new("abcxyzdefgh"),
+				&WordEng::new("abcvdefgh")
+			)
+		)
+	}
+	#[test]
+	fn kzko_ko() {
+		let expected_solutions = [
+			PrefixSuffixLen { prefix_len: 0, suffix_len: 2 },
+			PrefixSuffixLen { prefix_len: 1, suffix_len: 1 },
+		];
+		let actual_solution = calc_common_prefix_and_suffix_len(
+			&WordEng::new("kzko"),
+			&WordEng::new("ko")
+		);
+		dbg!(expected_solutions, actual_solution);
+		assert!(expected_solutions.contains(&actual_solution))
+	}
+	#[test]
+	fn kzz_k() {
+		assert_eq!(
+			PrefixSuffixLen { prefix_len: 1, suffix_len: 0 },
+			calc_common_prefix_and_suffix_len(
+				&WordEng::new("kzz"),
+				&WordEng::new("k")
+			)
+		)
+	}
+	#[test]
+	fn zzk_k() {
+		assert_eq!(
+			PrefixSuffixLen { prefix_len: 0, suffix_len: 1 },
+			calc_common_prefix_and_suffix_len(
+				&WordEng::new("zzk"),
+				&WordEng::new("k")
+			)
+		)
+	}
+}
+
+#[cfg(test)]
+mod random_search {
+	use super::*;
+	mod stability {
+		use super::*;
+		mod from_same {
+			use super::*;
+			#[test]
+			fn empty() {
+				let word = WordEng::new("");
+				for _ in 0..10_000 {
+					let random_action = word.gen_random_legal_action();
+					let _new_word = word.apply_action(random_action);
+				}
+			}
+			#[test]
+			fn a() {
+				let word = WordEng::new("a");
+				for _ in 0..10_000 {
+					let random_action = word.gen_random_legal_action();
+					let _new_word = word.apply_action(random_action);
+				}
+			}
+			#[test]
+			fn ab() {
+				let word = WordEng::new("ab");
+				for _ in 0..100_000 {
+					let random_action = word.gen_random_legal_action();
+					let _new_word = word.apply_action(random_action);
+				}
+			}
+			#[test]
+			fn abc() {
+				let word = WordEng::new("abc");
+				for _ in 0..1_000_000 {
+					let random_action = word.gen_random_legal_action();
+					let _new_word = word.apply_action(random_action);
+				}
+			}
+		}
+		mod chain {
+			use super::*;
+			#[test]
+			fn empty() {
+				let mut word = WordEng::new("");
+				for _ in 0..10_000 {
+					let random_action = word.gen_random_legal_action();
+					word.apply_action_mut(random_action);
+				}
+			}
+			#[test]
+			fn a() {
+				let mut word = WordEng::new("a");
+				for _ in 0..10_000 {
+					let random_action = word.gen_random_legal_action();
+					word.apply_action_mut(random_action);
+				}
+			}
+			#[test]
+			fn ab() {
+				let mut word = WordEng::new("ab");
+				for _ in 0..10_000 {
+					let random_action = word.gen_random_legal_action();
+					word.apply_action_mut(random_action);
+				}
+			}
+			#[test]
+			fn abc() {
+				let mut word = WordEng::new("abc");
+				for _ in 0..10_000 {
+					let random_action = word.gen_random_legal_action();
+					word.apply_action_mut(random_action);
+				}
+			}
+		}
+	}
+	mod completeness {
+		use super::*;
+		#[ignore = "TODO"]
+		#[test]
+		fn todo() {
+			todo!()
+		}
+	}
+}
