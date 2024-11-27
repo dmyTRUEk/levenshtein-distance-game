@@ -208,40 +208,40 @@ fn main_with_lang<const A: u8>(cli_args: CliArgsPost) {
 /// Allowed Actions aka Rules
 enum Action {
 	/* all features/rules:
-	#[cfg(feature = "add")]
-	#[cfg(feature = "remove")]
-	#[cfg(feature = "replace")]
-	#[cfg(feature = "swap")]
-	#[cfg(feature = "discard")]
-	#[cfg(feature = "take")]
-	#[cfg(feature = "copy")]
+	#[cfg(feature="add")]
+	#[cfg(feature="remove")]
+	#[cfg(feature="replace")]
+	#[cfg(feature="swap")]
+	#[cfg(feature="discard")]
+	#[cfg(feature="take")]
+	#[cfg(feature="copy")]
 	*/
 
-	#[cfg(feature = "add")]
+	#[cfg(feature="add")]
 	Add { index: usize, char: char },
 
-	#[cfg(feature = "remove")]
+	#[cfg(feature="remove")]
 	Remove { index: usize },
 
-	#[cfg(feature = "replace")]
+	#[cfg(feature="replace")]
 	Replace { index: usize, char: char },
 
-	// #[cfg(feature = "swap_one")]
+	// #[cfg(feature="swap_one")]
 	// SwapAtIndices { index1: usize, index2: usize },
 
-	#[cfg(feature = "swap")]
+	#[cfg(feature="swap")]
 	/// start and end indices are including
 	Swap { index1s: usize, index1e: usize, index2s: usize, index2e: usize },
 
-	#[cfg(feature = "discard")]
+	#[cfg(feature="discard")]
 	/// start and end indices are including
 	Discard { index_start: usize, index_end: usize },
 
-	#[cfg(feature = "take")]
+	#[cfg(feature="take")]
 	/// start and end indices are including
 	Take { index_start: usize, index_end: usize },
 
-	#[cfg(feature = "copy")]
+	#[cfg(feature="copy")]
 	/// start and end indices are including
 	Copy_ { index_start: usize, index_end: usize, index_insert: usize },
 }
@@ -250,36 +250,36 @@ impl Action {
 	fn shift_indices_mut(&mut self, shift: usize) {
 		use Action::*;
 		match self {
-			#[cfg(feature = "add")]
+			#[cfg(feature="add")]
 			Add { index, char: _ } => {
 				*index += shift;
 			}
-			#[cfg(feature = "remove")]
+			#[cfg(feature="remove")]
 			Remove { index } => {
 				*index += shift;
 			}
-			#[cfg(feature = "replace")]
+			#[cfg(feature="replace")]
 			Replace { index, char: _ } => {
 				*index += shift;
 			}
-			#[cfg(feature = "swap")]
+			#[cfg(feature="swap")]
 			Swap { index1s, index1e, index2s, index2e } => {
 				*index1s += shift;
 				*index1e += shift;
 				*index2s += shift;
 				*index2e += shift;
 			}
-			#[cfg(feature = "discard")]
+			#[cfg(feature="discard")]
 			Discard { index_start, index_end } => {
 				*index_start += shift;
 				*index_end   += shift;
 			}
-			#[cfg(feature = "take")]
+			#[cfg(feature="take")]
 			Take { index_start, index_end } => {
 				*index_start += shift;
 				*index_end   += shift;
 			}
-			#[cfg(feature = "copy")]
+			#[cfg(feature="copy")]
 			Copy_ { index_start, index_end, index_insert } => {
 				*index_start  += shift;
 				*index_end    += shift;
@@ -307,13 +307,13 @@ impl Action {
 			// #[cfg(all(feature="add", feature="remove", feature="swap"))]
 			// Add { .. } if word1.len() == word2.len() => true,
 
-			#[cfg(feature = "add")]
+			#[cfg(feature="add")]
 			Add { .. } if word2.len() == 0 => true,
-			#[cfg(feature = "remove")]
+			#[cfg(feature="remove")]
 			Remove { .. } if word2.len() == 0 => false, // to avoid mistakes
-			#[cfg(feature = "replace")]
+			#[cfg(feature="replace")]
 			Replace { .. } if word2.len() == 0 => true,
-			#[cfg(feature = "swap")]
+			#[cfg(feature="swap")]
 			Swap { .. } if word2.len() == 0 => true,
 
 			// TODO: more?
@@ -329,7 +329,7 @@ impl Action {
 		match (self, action_next) {
 			// OPTIMIZATIONS 2:
 
-			#[cfg(feature = "replace")]
+			#[cfg(feature="replace")]
 			(Replace { index: i1, .. }, Replace { index: i2, .. }) if i1 == i2 => true,
 
 			#[cfg(all(feature="add", feature="replace"))]
@@ -410,22 +410,22 @@ impl<const A: u8> Word<A> {
 		use Action::*;
 		let self_len = self.len();
 		match action {
-			#[cfg(feature = "add")]
+			#[cfg(feature="add")]
 			Add { index, char: _ } => {
 				// if self_len == Self::MAX_LEN { return false }
 				if index > self_len { return false }
 			}
-			#[cfg(feature = "remove")]
+			#[cfg(feature="remove")]
 			Remove { index } => {
 				// if self_len == 1 { return false }
 				if index >= self_len { return false }
 			}
-			#[cfg(feature = "replace")]
+			#[cfg(feature="replace")]
 			Replace { index, char } => {
 				if index >= self_len { return false }
 				if self.chars[index] == char { return false }
 			}
-			#[cfg(feature = "swap")]
+			#[cfg(feature="swap")]
 			Swap { index1s, index1e, index2s, index2e } => {
 				if index1s >= self_len { return false }
 				if index1e >= self_len { return false }
@@ -433,19 +433,19 @@ impl<const A: u8> Word<A> {
 				if index2e >= self_len { return false }
 				if !(index1s <= index1e && index1e < index2s && index2s <= index2e) { return false }
 			}
-			#[cfg(feature = "discard")]
+			#[cfg(feature="discard")]
 			Discard { index_start, index_end } => {
 				if index_start >= self_len { return false }
 				if index_end   >= self_len { return false }
 				if !(index_start <= index_end) { return false }
 			}
-			#[cfg(feature = "take")]
+			#[cfg(feature="take")]
 			Take { index_start, index_end } => {
 				if index_start >= self_len { return false }
 				if index_end   >= self_len { return false }
 				if !(index_start <= index_end) { return false }
 			}
-			#[cfg(feature = "copy")]
+			#[cfg(feature="copy")]
 			Copy_ { index_start, index_end, index_insert } => {
 				if index_start  >= self_len { return false }
 				if index_end    >= self_len { return false }
@@ -467,19 +467,19 @@ impl<const A: u8> Word<A> {
 		if !self.is_legal_action(action) { panic!("self={self:?}\naction={action:?}") }
 		// dbg!(action);
 		match action {
-			#[cfg(feature = "add")]
+			#[cfg(feature="add")]
 			Add { index, char } => {
 				self.chars.insert(index, char);
 			}
-			#[cfg(feature = "remove")]
+			#[cfg(feature="remove")]
 			Remove { index } => {
 				let _ = self.chars.remove(index);
 			}
-			#[cfg(feature = "replace")]
+			#[cfg(feature="replace")]
 			Replace { index, char } => {
 				self.chars[index] = char;
 			}
-			#[cfg(feature = "swap")]
+			#[cfg(feature="swap")]
 			Swap { index1s, index1e, index2s, index2e } => {
 				let before = &self.chars[..index1s];
 				let part_1 = &self.chars[index1s..=index1e];
@@ -492,15 +492,15 @@ impl<const A: u8> Word<A> {
 					.flatten()
 					.collect();
 			}
-			#[cfg(feature = "discard")]
+			#[cfg(feature="discard")]
 			Discard { index_start, index_end } => {
 				let _ = self.chars.drain(index_start..=index_end);
 			}
-			#[cfg(feature = "take")]
+			#[cfg(feature="take")]
 			Take { index_start, index_end } => {
 				self.chars = self.chars[index_start..=index_end].to_vec();
 			}
-			#[cfg(feature = "copy")]
+			#[cfg(feature="copy")]
 			Copy_ { index_start, index_end, index_insert } => {
 				let _ = self.chars.splice(
 					index_insert..index_insert,
@@ -679,7 +679,7 @@ mod tests {
 			)
 		}
 
-		#[cfg(feature = "add")]
+		#[cfg(feature="add")]
 		mod add {
 			use super::*;
 			use Action::Add;
@@ -769,7 +769,7 @@ mod tests {
 			}
 		}
 
-		#[cfg(feature = "remove")]
+		#[cfg(feature="remove")]
 		mod remove {
 			use super::*;
 			use Action::Remove;
@@ -848,7 +848,7 @@ mod tests {
 			}
 		}
 
-		#[cfg(feature = "replace")]
+		#[cfg(feature="replace")]
 		mod replace {
 			use super::*;
 			use Action::Replace;
@@ -875,7 +875,7 @@ mod tests {
 			}
 		}
 
-		#[cfg(feature = "swap")]
+		#[cfg(feature="swap")]
 		mod swap {
 			use super::*;
 			use Action::Swap;
@@ -895,7 +895,7 @@ mod tests {
 			}
 		}
 
-		#[cfg(feature = "discard")]
+		#[cfg(feature="discard")]
 		mod discard {
 			use super::*;
 			use Action::Discard;
@@ -943,7 +943,7 @@ mod tests {
 			}
 		}
 
-		#[cfg(feature = "take")]
+		#[cfg(feature="take")]
 		mod take {
 			use super::*;
 			use Action::Take;
@@ -956,7 +956,7 @@ mod tests {
 			}
 		}
 
-		#[cfg(feature = "copy")]
+		#[cfg(feature="copy")]
 		mod copy {
 			use super::*;
 			use Action::Copy_;

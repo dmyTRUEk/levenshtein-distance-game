@@ -25,25 +25,25 @@ impl Action {
 	fn priority(self) -> i32 {
 		use Action::*;
 		match self {
-			#[cfg(feature = "add")]
+			#[cfg(feature="add")]
 			Add { .. } => 1,
 
-			#[cfg(feature = "remove")]
+			#[cfg(feature="remove")]
 			Remove { .. } => -1,
 
-			#[cfg(feature = "replace")]
+			#[cfg(feature="replace")]
 			Replace { .. } => 0,
 
-			#[cfg(feature = "swap")]
+			#[cfg(feature="swap")]
 			Swap { index1s, index1e, index2s, index2e } => ((index1e as i32)-(index1s as i32)+1) * ((index2e as i32)-(index2s as i32)+1),
 
-			#[cfg(feature = "discard")]
+			#[cfg(feature="discard")]
 			Discard { index_start, index_end } => -((index_end as i32)-(index_start as i32)+1),
 
-			#[cfg(feature = "take")]
+			#[cfg(feature="take")]
 			Take { index_start, index_end } => -((index_end as i32)-(index_start as i32)+1),
 
-			#[cfg(feature = "copy")]
+			#[cfg(feature="copy")]
 			Copy_ { index_start, index_end, index_insert } => todo!(),
 		}
 	}

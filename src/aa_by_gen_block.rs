@@ -10,26 +10,26 @@ impl<const A: u8> Word<A> {
 			let len = self.len();
 			let alphabet = Language::get_alphabet_from_lang_index(A);
 
-			#[cfg(feature = "remove")] // COMPLEXITY: L
+			#[cfg(feature="remove")] // COMPLEXITY: L
 			for index in 0..len {
 				yield Remove { index }
 			}
 
-			#[cfg(feature = "take")] // COMPLEXITY: ~ L^2
+			#[cfg(feature="take")] // COMPLEXITY: ~ L^2
 			for index_start in 0..len {
 				for index_end in index_start+1..len {
 					yield Take { index_start, index_end }
 				}
 			}
 
-			#[cfg(feature = "discard")] // COMPLEXITY: ~ L^2
+			#[cfg(feature="discard")] // COMPLEXITY: ~ L^2
 			for index_start in 0..len {
 				for index_end in index_start+1..len {
 					yield Discard { index_start, index_end }
 				}
 			}
 
-			#[cfg(feature = "replace")] // COMPLEXITY: L * A
+			#[cfg(feature="replace")] // COMPLEXITY: L * A
 			for index in 0..len {
 				for char in alphabet.chars() {
 					if self.chars[index] == char { continue }
@@ -37,7 +37,7 @@ impl<const A: u8> Word<A> {
 				}
 			}
 
-			#[cfg(feature = "swap")] // COMPLEXITY: ~ L^4
+			#[cfg(feature="swap")] // COMPLEXITY: ~ L^4
 			for index1s in 0..len {
 				for index1e in index1s..len {
 					for index2s in index1e+1..len {
@@ -48,14 +48,14 @@ impl<const A: u8> Word<A> {
 				}
 			}
 
-			#[cfg(feature = "add")] // COMPLEXITY: (L+1) * A
+			#[cfg(feature="add")] // COMPLEXITY: (L+1) * A
 			for index in 0..=len {
 				for char in alphabet.chars() {
 					yield Add { index, char }
 				}
 			}
 
-			#[cfg(feature = "copy")] // COMPLEXITY: ~ L^3
+			#[cfg(feature="copy")] // COMPLEXITY: ~ L^3
 			for index_start in 0..len {
 				for index_end in index_start+1..len {
 					for index_insert in 0..=len {
