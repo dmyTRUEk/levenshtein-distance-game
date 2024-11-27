@@ -57,7 +57,7 @@ impl<const A: u8> Word<A> {
 
 			#[cfg(feature="copy")] // COMPLEXITY: ~ L^3
 			for index_start in 0..len {
-				for index_end in index_start+1..len {
+				for index_end in index_start+2..len {
 					for index_insert in 0..=len {
 						yield Copy_ { index_start, index_end, index_insert }
 					}
