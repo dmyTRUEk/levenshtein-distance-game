@@ -4,6 +4,7 @@
 
 pub trait VecPushed<T> {
 	fn pushed(self, el: T) -> Self;
+	/// Pushed and optimized (shrink_to_fit).
 	fn pushed_opt(self, el: T) -> Self;
 }
 impl<T> VecPushed<T> for Vec<T> {

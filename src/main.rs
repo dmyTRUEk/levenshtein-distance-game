@@ -70,7 +70,7 @@ struct CliArgsPre {
 	#[arg(short, long, default_value="eng")]
 	language: String,
 
-	/// Word 1 , Word 2
+	/// <Word 1>,<Word 2>
 	#[arg(short, long)]
 	word12: Option<String>,
 }
@@ -93,7 +93,7 @@ impl From<CliArgsPre> for CliArgsPost {
 			word12: word12
 				.map(|word12| {
 					word12.split_once([',', '.', '/', '~']).unwrap().to_strings().into()
-				})
+				}),
 		}
 	}
 }
@@ -295,8 +295,10 @@ impl Action {
 		self
 	}
 
-	fn is_vain<const A: u8>(&self, word1: &Word<A>, word2: &Word<A>) -> bool {
+	fn is_vain<const A: u8>(&self, word1_len: usize, word2_len: usize) -> bool {
 		use Action::*;
+		let l1 = word1_len;
+		let l2 = word2_len;
 		match self {
 			// OPTIMIZATIONS 1:
 
@@ -305,16 +307,16 @@ impl Action {
 			// // 2. remove{3} , add{0,x} => 2 ops
 			// // 3. swap{0,2,3,3} => 1 op !!!
 			// #[cfg(all(feature="add", feature="remove", feature="swap"))]
-			// Add { .. } if word1.len() == word2.len() => true,
+			// Add { .. } if l1 == l2 => true,
 
 			#[cfg(feature="add")]
-			Add { .. } if word2.len() == 0 => true,
+			Add { .. } if l2 == 0 => true,
 			#[cfg(feature="remove")]
-			Remove { .. } if word2.len() == 0 => false, // to avoid mistakes
+			Remove { .. } if l2 == 0 => false, // to avoid mistakes
 			#[cfg(feature="replace")]
-			Replace { .. } if word2.len() == 0 => true,
+			Replace { .. } if l2 == 0 => true,
 			#[cfg(feature="swap")]
-			Swap { .. } if word2.len() == 0 => true,
+			Swap { .. } if l2 == 0 => true,
 
 			// TODO: more?
 
@@ -357,6 +359,9 @@ impl Language {
 			_ => panic!()
 		}
 	}
+	pub const fn get_alphabet_from_lang_index(lang_index: u8) -> &'static str {
+		Self::from_index(lang_index).get_alphabet()
+	}
 	pub const fn get_alphabet(&self) -> &'static str {
 		use Language::*;
 		const ALPHABET_ENG: &str = "abcdefghijklmnopqrstuvwxyz";
@@ -366,15 +371,10 @@ impl Language {
 			Ukr => ALPHABET_UKR,
 		}
 	}
-	pub const fn get_alphabet_from_lang_index(lang_index: u8) -> &'static str {
-		Self::from_index(lang_index).get_alphabet()
-	}
 }
 
 
 
-type WordEng = Word<{Language::ENG}>;
-type WordUkr = Word<{Language::UKR}>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Word<const A: u8> {
@@ -463,6 +463,7 @@ impl<const A: u8> Word<A> {
 	}
 
 	fn apply_action_mut(&mut self, action: Action) {
+		// dbg!(&self, action);
 		use Action::*;
 		if !self.is_legal_action(action) { panic!("self={self:?}\naction={action:?}") }
 		// dbg!(action);
@@ -526,6 +527,7 @@ impl<const A: u8> Word<A> {
 }
 
 
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct PrefixSuffixLen { prefix_len: usize, suffix_len: usize }
 impl From<(usize, usize)> for PrefixSuffixLen {
@@ -563,8 +565,12 @@ fn calc_common_prefix_and_suffix_len<const A: u8>(word1: &Word<A>, word2: &Word<
 }
 
 
-fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -> Vec<Vec<Action>> {
-	// dbg!(&word_initial, &word_target);
+fn find_solutions_st<const A: u8>(
+	word_initial: Word<A>,
+	word_target: Word<A>,
+) -> Vec<Vec<Action>> {
+	// println!("{}", "-".repeat(42));
+	// println!("[{f}:{l}] initial: {}\t\ttarget: {}", word_initial.to_string(), word_target.to_string(), f=file!(), l=line!());
 	if word_initial == word_target { return vec![vec![]] }
 	let mut words: Vec<(Word<A>, Vec<Action>)> = vec![(word_initial, vec![])];
 	let mut new_words: Vec<(Word<A>, Vec<Action>)> = vec![];
@@ -591,7 +597,7 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 						iter
 					} {
 						// use optimizations 1:
-						if action.is_vain(&word, &word_target) { continue }
+						if action.is_vain::<A>(word.len(), word_target.len()) { continue }
 						// use optimizations 2:
 						// if let Some(action_prev) = actions.last() && action_prev.is_vain_with(&action) { continue } // TODO
 						if actions.last().is_some_and(|action_prev| action_prev.is_vain_with(&action)) { continue }
@@ -609,18 +615,6 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 					let word_ncp = Word::<A>::from(&word.chars[prefix_len..word.len()-suffix_len]);
 					let word_target_ncp = Word::from(&word_target.chars[prefix_len..word_target.len()-suffix_len]);
 					for solution in find_solutions_st(word_ncp, word_target_ncp) {
-						// solutions.push(
-						// 	actions
-						// 		.clone()
-						// 		.into_iter()
-						// 		.chain(
-						// 			solution
-						// 				.iter()
-						// 				.map(|a| a.shifted_indices(prefix_len))
-						// 		)
-						// 		.collect()
-						// );
-
 						let mut solution: Vec<Action> = solution
 							.iter()
 							.map(|a| a.shifted_indices(prefix_len))
@@ -641,7 +635,10 @@ fn find_solutions_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -
 	solutions
 }
 
-fn find_solution_st<const A: u8>(word_initial: Word<A>, word_target: Word<A>) -> Vec<Action> {
+fn find_solution_st<const A: u8>(
+	word_initial: Word<A>,
+	word_target: Word<A>,
+) -> Vec<Action> {
 	find_solutions_st(word_initial, word_target)
 		.into_iter()
 		.min_by_key(|s| s.len())
@@ -667,6 +664,9 @@ fn calc_score(word2_len: usize, solution_len: usize) -> u8 {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	type WordEng = Word<{Language::ENG}>;
+	// type WordUkr = Word<{Language::UKR}>;
 
 	mod find_solution {
 		use super::*;
@@ -966,10 +966,7 @@ mod tests {
 					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 0 }],
 					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 3 }],
 				];
-				let actual_solution = find_solution_st(
-					WordEng::new("foo"),
-					WordEng::new("foofoo")
-				);
+				let actual_solution = find_solution_st(WordEng::new("foo"), WordEng::new("foofoo"));
 				dbg!(&expected_solutions, &actual_solution);
 				assert!(expected_solutions.contains(&actual_solution))
 			}

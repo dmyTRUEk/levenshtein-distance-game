@@ -35,19 +35,32 @@ impl Action {
 			Replace { .. } => 0,
 
 			#[cfg(feature="swap")]
-			Swap { index1s, index1e, index2s, index2e } => ((index1e as i32)-(index1s as i32)+1) * ((index2e as i32)-(index2s as i32)+1),
+			Swap { index1s, index1e, index2s, index2e } => {
+				let index1s = index1s as i32;
+				let index1e = index1e as i32;
+				let index2s = index2s as i32;
+				let index2e = index2e as i32;
+				(index1e - index1s + 1) * (index2e - index2s + 1)
+			}
 
 			#[cfg(feature="discard")]
-			Discard { index_start, index_end } => -((index_end as i32)-(index_start as i32)+1),
+			Discard { index_start, index_end } => {
+				let index_start = index_start as i32;
+				let index_end = index_end as i32;
+				-(index_end - index_start + 1)
+			}
 
 			#[cfg(feature="take")]
-			Take { index_start, index_end } => -((index_end as i32)-(index_start as i32)+1),
+			Take { index_start, index_end } => {
+				let index_start = index_start as i32;
+				let index_end = index_end as i32;
+				-(index_end - index_start + 1)
+			}
 
 			#[cfg(feature="copy")]
 			Copy_ { index_start, index_end, index_insert } => todo!(),
 		}
 	}
-
 }
 
 
