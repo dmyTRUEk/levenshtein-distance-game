@@ -1286,5 +1286,90 @@ mod tests {
 			)
 		}
 	}
+
+	mod random_search {
+		use super::*;
+		mod stability {
+			use super::*;
+			mod from_same {
+				use super::*;
+				#[test]
+				fn empty() {
+					let word = WordEng::new("");
+					for _ in 0..10_000 {
+						let random_action = word.gen_random_legal_action();
+						let _new_word = word.apply_action(random_action);
+					}
+				}
+				#[test]
+				fn a() {
+					let word = WordEng::new("a");
+					for _ in 0..10_000 {
+						let random_action = word.gen_random_legal_action();
+						let _new_word = word.apply_action(random_action);
+					}
+				}
+				#[test]
+				fn ab() {
+					let word = WordEng::new("ab");
+					for _ in 0..100_000 {
+						let random_action = word.gen_random_legal_action();
+						let _new_word = word.apply_action(random_action);
+					}
+				}
+				#[test]
+				fn abc() {
+					let word = WordEng::new("abc");
+					for _ in 0..1_000_000 {
+						let random_action = word.gen_random_legal_action();
+						let _new_word = word.apply_action(random_action);
+					}
+				}
+			}
+			mod chain {
+				use super::*;
+				#[test]
+				fn empty() {
+					let mut word = WordEng::new("");
+					for _ in 0..10_000 {
+						let random_action = word.gen_random_legal_action();
+						word.apply_action_mut(random_action);
+					}
+				}
+				#[test]
+				fn a() {
+					let mut word = WordEng::new("a");
+					for _ in 0..10_000 {
+						let random_action = word.gen_random_legal_action();
+						word.apply_action_mut(random_action);
+					}
+				}
+				#[test]
+				fn ab() {
+					let mut word = WordEng::new("ab");
+					for _ in 0..10_000 {
+						let random_action = word.gen_random_legal_action();
+						word.apply_action_mut(random_action);
+					}
+				}
+				#[test]
+				fn abc() {
+					let mut word = WordEng::new("abc");
+					for _ in 0..10_000 {
+						let random_action = word.gen_random_legal_action();
+						word.apply_action_mut(random_action);
+					}
+				}
+			}
+		}
+		mod completeness {
+			use super::*;
+			#[ignore = "TODO"]
+			#[test]
+			fn todo() {
+				todo!()
+			}
+		}
+	}
 }
 
