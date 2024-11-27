@@ -213,8 +213,8 @@ enum Action {
 	#[cfg(feature = "replace")]
 	#[cfg(feature = "swap")]
 	#[cfg(feature = "discard")]
-	#[cfg(feature = "copy")]
 	#[cfg(feature = "take")]
+	#[cfg(feature = "copy")]
 	*/
 
 	#[cfg(feature = "add")]
@@ -237,13 +237,13 @@ enum Action {
 	/// start and end indices are including
 	Discard { index_start: usize, index_end: usize },
 
-	#[cfg(feature = "copy")]
-	/// start and end indices are including
-	Copy_ { index_start: usize, index_end: usize, index_insert: usize },
-
 	#[cfg(feature = "take")]
 	/// start and end indices are including
 	Take { index_start: usize, index_end: usize },
+
+	#[cfg(feature = "copy")]
+	/// start and end indices are including
+	Copy_ { index_start: usize, index_end: usize, index_insert: usize },
 }
 
 impl Action {
@@ -274,16 +274,16 @@ impl Action {
 				*index_start += shift;
 				*index_end   += shift;
 			}
+			#[cfg(feature = "take")]
+			Take { index_start, index_end } => {
+				*index_start += shift;
+				*index_end   += shift;
+			}
 			#[cfg(feature = "copy")]
 			Copy_ { index_start, index_end, index_insert } => {
 				*index_start  += shift;
 				*index_end    += shift;
 				*index_insert += shift;
-			}
-			#[cfg(feature = "take")]
-			Take { index_start, index_end } => {
-				*index_start += shift;
-				*index_end   += shift;
 			}
 			#[allow(unreachable_patterns)] // reason: to test if works with `--no-default-features`
 			_ => {}
@@ -439,18 +439,18 @@ impl<const A: u8> Word<A> {
 				if index_end   >= self_len { return false }
 				if !(index_start <= index_end) { return false }
 			}
-			#[cfg(feature = "copy")]
-			Copy_ { index_start, index_end, index_insert } => {
-				if index_start  >= self_len { return false }
-				if index_end    >= self_len { return false }
-				if index_insert >= self_len { return false }
-				if !(index_start <= index_end) { return false }
-			}
 			#[cfg(feature = "take")]
 			Take { index_start, index_end } => {
 				if index_start >= self_len { return false }
 				if index_end   >= self_len { return false }
 				if !(index_start <= index_end) { return false }
+			}
+			#[cfg(feature = "copy")]
+			Copy_ { index_start, index_end, index_insert } => {
+				if index_start  >= self_len { return false }
+				if index_end    >= self_len { return false }
+				if index_insert >  self_len { return false }
+				if !(index_start + 1 < index_end) { return false }
 			}
 		}
 		true
@@ -496,16 +496,16 @@ impl<const A: u8> Word<A> {
 			Discard { index_start, index_end } => {
 				let _ = self.chars.drain(index_start..=index_end);
 			}
+			#[cfg(feature = "take")]
+			Take { index_start, index_end } => {
+				self.chars = self.chars[index_start..=index_end].to_vec();
+			}
 			#[cfg(feature = "copy")]
 			Copy_ { index_start, index_end, index_insert } => {
 				let _ = self.chars.splice(
 					index_insert..index_insert,
 					self.chars[index_start..=index_end].to_vec()
 				);
-			}
-			#[cfg(feature = "take")]
-			Take { index_start, index_end } => {
-				self.chars = self.chars[index_start..=index_end].to_vec();
 			}
 		}
 	}
@@ -943,6 +943,19 @@ mod tests {
 			}
 		}
 
+		#[cfg(feature = "take")]
+		mod take {
+			use super::*;
+			use Action::Take;
+			#[test]
+			fn foobarxyz_foo() {
+				assert_eq!(
+					vec![Take { index_start: 3, index_end: 5 }],
+					find_solution_st(WordEng::new("foobarxyz"), WordEng::new("bar"))
+				)
+			}
+		}
+
 		#[cfg(feature = "copy")]
 		mod copy {
 			use super::*;
@@ -972,19 +985,6 @@ mod tests {
 				assert_eq!(
 					vec![Copy_ { index_start: 3, index_end: 5, index_insert: 0 }],
 					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoobar"))
-				)
-			}
-		}
-
-		#[cfg(feature = "take")]
-		mod take {
-			use super::*;
-			use Action::Take;
-			#[test]
-			fn foobar_foo() {
-				assert_eq!(
-					vec![Take { index_start: 3, index_end: 5 }],
-					find_solution_st(WordEng::new("foobarxyz"), WordEng::new("bar"))
 				)
 			}
 		}

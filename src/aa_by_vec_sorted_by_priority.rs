@@ -40,11 +40,11 @@ impl Action {
 			#[cfg(feature = "discard")]
 			Discard { index_start, index_end } => -((index_end as i32)-(index_start as i32)+1),
 
-			#[cfg(feature = "copy")]
-			Copy_ { index_start: usize, index_end: usize, index_insert: usize } => todo!(),
-
 			#[cfg(feature = "take")]
 			Take { index_start, index_end } => -((index_end as i32)-(index_start as i32)+1),
+
+			#[cfg(feature = "copy")]
+			Copy_ { index_start, index_end, index_insert } => todo!(),
 		}
 	}
 
