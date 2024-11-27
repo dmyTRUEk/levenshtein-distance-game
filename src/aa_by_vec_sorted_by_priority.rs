@@ -43,8 +43,8 @@ impl Action {
 				(index1e - index1s + 1) * (index2e - index2s + 1)
 			}
 
-			#[cfg(feature="discard")]
-			Discard { index_start, index_end } => {
+			#[cfg(feature="drop")]
+			Drop_ { index_start, index_end } => {
 				let index_start = index_start as i32;
 				let index_end = index_end as i32;
 				-(index_end - index_start + 1)

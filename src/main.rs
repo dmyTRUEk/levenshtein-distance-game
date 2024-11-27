@@ -230,7 +230,7 @@ enum Action {
 	#[cfg(feature="remove")]
 	#[cfg(feature="replace")]
 	#[cfg(feature="swap")]
-	#[cfg(feature="discard")]
+	#[cfg(feature="drop")]
 	#[cfg(feature="take")]
 	#[cfg(feature="copy")]
 	*/
@@ -251,9 +251,9 @@ enum Action {
 	/// start and end indices are including
 	Swap { index1s: usize, index1e: usize, index2s: usize, index2e: usize },
 
-	#[cfg(feature="discard")]
+	#[cfg(feature="drop")]
 	/// start and end indices are including
-	Discard { index_start: usize, index_end: usize },
+	Drop_ { index_start: usize, index_end: usize },
 
 	#[cfg(feature="take")]
 	/// start and end indices are including
@@ -271,7 +271,7 @@ impl Action {
 		#[cfg(feature="remove")]  { n += 1 }
 		#[cfg(feature="replace")] { n += 1 }
 		#[cfg(feature="swap")]    { n += 1 }
-		#[cfg(feature="discard")] { n += 1 }
+		#[cfg(feature="drop")]    { n += 1 }
 		#[cfg(feature="take")]    { n += 1 }
 		#[cfg(feature="copy")]    { n += 1 }
 		n
@@ -299,8 +299,8 @@ impl Action {
 				*index2s += shift;
 				*index2e += shift;
 			}
-			#[cfg(feature="discard")]
-			Discard { index_start, index_end } => {
+			#[cfg(feature="drop")]
+			Drop_ { index_start, index_end } => {
 				*index_start += shift;
 				*index_end   += shift;
 			}
@@ -348,8 +348,8 @@ impl Action {
 			#[cfg(feature="swap")]
 			Swap { .. } if l2 == 0 => true,
 
-			#[cfg(feature="discard")]
-			Discard { .. } if l1 <= 1 => true,
+			#[cfg(feature="drop")]
+			Drop_ { .. } if l1 <= 1 => true,
 			#[cfg(feature="take")]
 			Take { .. } if l1 <= 2 => true,
 			#[cfg(feature="copy")]
@@ -490,8 +490,8 @@ impl<const A: u8> Word<A> {
 				if index2e >= self_len { return false }
 				if !(index1s <= index1e && index1e < index2s && index2s <= index2e) { return false }
 			}
-			#[cfg(feature="discard")]
-			Discard { index_start, index_end } => {
+			#[cfg(feature="drop")]
+			Drop_ { index_start, index_end } => {
 				if index_start >= self_len { return false }
 				if index_end   >= self_len { return false }
 				if !(index_start <= index_end) { return false }
@@ -550,8 +550,8 @@ impl<const A: u8> Word<A> {
 					.flatten()
 					.collect();
 			}
-			#[cfg(feature="discard")]
-			Discard { index_start, index_end } => {
+			#[cfg(feature="drop")]
+			Drop_ { index_start, index_end } => {
 				let _ = self.chars.drain(index_start..=index_end);
 			}
 			#[cfg(feature="take")]
@@ -628,7 +628,7 @@ impl<const A: u8> Word<A> {
 				0 => unreachable!(), // checked above, see #c5ef13
 				1 => {
 					#[cfg(feature="swap")] { max -= 1 }
-					#[cfg(feature="discard")] { max -= 1 }
+					#[cfg(feature="drop")] { max -= 1 }
 					#[cfg(feature="take")] { max -= 1 }
 					#[cfg(feature="copy")] { max -= 1 }
 				}
@@ -686,13 +686,13 @@ impl<const A: u8> Word<A> {
 			random_action_index -= 1;
 		}
 		// dbg!();
-		#[cfg(feature="discard")] {
+		#[cfg(feature="drop")] {
 			if random_action_index == 0 {
 				let index_start = random_index_m1!();
 				// dbg!(index_start);
 				let index_end = random!(index_start+1..len);
 				// dbg!(index_end);
-				return Discard { index_start, index_end };
+				return Drop_ { index_start, index_end };
 			}
 			random_action_index -= 1;
 		}
@@ -1027,7 +1027,7 @@ mod find_solution {
 				find_solution_st(WordEng::new("foobar"), WordEng::new("oobar"), None)
 			)
 		}
-		#[ignore = "discard solves it better"]
+		#[ignore = "drop solves it better"]
 		#[test]
 		fn bb() {
 			assert_eq!(
@@ -1038,7 +1038,7 @@ mod find_solution {
 				find_solution_st(WordEng::new("foobar"), WordEng::new("obar"), None)
 			)
 		}
-		#[ignore = "discard solves it better"]
+		#[ignore = "drop solves it better"]
 		#[test]
 		fn bbb() {
 			assert_eq!(
@@ -1057,7 +1057,7 @@ mod find_solution {
 				find_solution_st(WordEng::new("foobar"), WordEng::new("fooba"), None)
 			)
 		}
-		#[ignore = "discard solves it better"]
+		#[ignore = "drop solves it better"]
 		#[test]
 		fn ee() {
 			let expected_solutions = vec![
@@ -1074,7 +1074,7 @@ mod find_solution {
 			dbg!(&expected_solutions, &actual_solution);
 			assert!(expected_solutions.contains(&actual_solution))
 		}
-		#[ignore = "discard solves it better"]
+		#[ignore = "drop solves it better"]
 		#[test]
 		fn eee() {
 			let expected_solutions = vec![
@@ -1142,49 +1142,49 @@ mod find_solution {
 		}
 	}
 
-	#[cfg(feature="discard")]
-	mod discard {
+	#[cfg(feature="drop")]
+	mod drop {
 		use super::*;
-		use Action::Discard;
+		use Action::Drop_;
 		#[test]
 		fn b2() {
 			assert_eq!(
-				vec![Discard { index_start: 0, index_end: 1 }],
+				vec![Drop_ { index_start: 0, index_end: 1 }],
 				find_solution_st(WordEng::new("foobar"), WordEng::new("obar"), None)
 			)
 		}
 		#[test]
 		fn b3() {
 			assert_eq!(
-				vec![Discard { index_start: 0, index_end: 2 }],
+				vec![Drop_ { index_start: 0, index_end: 2 }],
 				find_solution_st(WordEng::new("foobar"), WordEng::new("bar"), None)
 			)
 		}
 		#[test]
 		fn e2() {
 			assert_eq!(
-				vec![Discard { index_start: 4, index_end: 5 }],
+				vec![Drop_ { index_start: 4, index_end: 5 }],
 				find_solution_st(WordEng::new("foobar"), WordEng::new("foob"), None)
 			)
 		}
 		#[test]
 		fn e3() {
 			assert_eq!(
-				vec![Discard { index_start: 3, index_end: 5 }],
+				vec![Drop_ { index_start: 3, index_end: 5 }],
 				find_solution_st(WordEng::new("foobar"), WordEng::new("foo"), None)
 			)
 		}
 		#[test]
 		fn m2() {
 			assert_eq!(
-				vec![Discard { index_start: 2, index_end: 3 }],
+				vec![Drop_ { index_start: 2, index_end: 3 }],
 				find_solution_st(WordEng::new("foobar"), WordEng::new("foar"), None)
 			)
 		}
 		#[test]
 		fn m4() {
 			assert_eq!(
-				vec![Discard { index_start: 1, index_end: 4 }],
+				vec![Drop_ { index_start: 1, index_end: 4 }],
 				find_solution_st(WordEng::new("foobar"), WordEng::new("fr"), None)
 			)
 		}

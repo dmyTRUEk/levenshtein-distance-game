@@ -22,10 +22,10 @@ impl<const A: u8> Word<A> {
 				}
 			}
 
-			#[cfg(feature="discard")] // COMPLEXITY: ~ L^2
+			#[cfg(feature="drop")] // COMPLEXITY: ~ L^2
 			for index_start in 0..len {
 				for index_end in index_start+1..len {
-					yield Discard { index_start, index_end }
+					yield Drop_ { index_start, index_end }
 				}
 			}
 
