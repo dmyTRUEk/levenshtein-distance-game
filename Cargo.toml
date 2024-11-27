@@ -2,7 +2,7 @@
 
 [package]
 name = "levenshtein-distance-game"
-version = "0.0.0"
+version = "0.11.0"
 # edition = "2024"
 edition = "2021"
 authors = ["dmyTRUEk"]
