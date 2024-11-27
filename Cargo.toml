@@ -2,14 +2,14 @@
 
 [package]
 name = "levenshtein-distance-game"
-version = "0.11.0"
+version = "0.12.0"
 # edition = "2024"
 edition = "2021"
 authors = ["dmyTRUEk"]
 
 [features]
 default = [
-	"arrsdt",
+	"arrsdtc",
 	"aa_by_vec",
 ]
 # rules:
@@ -45,3 +45,4 @@ strip = "debuginfo"
 
 [dependencies]
 clap = { version = "4.5.20", features = ["derive"] }
+rand = "0.8.5"

@@ -58,7 +58,12 @@ impl Action {
 			}
 
 			#[cfg(feature="copy")]
-			Copy_ { index_start, index_end, index_insert } => todo!(),
+			Copy_ { index_start, index_end, .. } => {
+				let index_start = index_start as i32;
+				let index_end = index_end as i32;
+				// let index_insert = index_insert as i32;
+				index_end - index_start
+			}
 		}
 	}
 }

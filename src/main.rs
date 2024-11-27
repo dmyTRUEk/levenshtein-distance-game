@@ -8,6 +8,7 @@
 // TODO
 // #![feature(
 // 	let_chains,
+// 	variant_count, // TODO
 // )]
 
 #![cfg_attr(
@@ -22,9 +23,13 @@
 
 
 
-use std::ops::Add;
+use std::{
+	// mem::variant_count as enum_variant_count, // TODO
+	ops::Add,
+};
 
 use clap::{Parser, arg};
+use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 mod extensions;
 mod macros;
@@ -73,16 +78,22 @@ struct CliArgsPre {
 	/// <Word 1>,<Word 2>
 	#[arg(short, long)]
 	word12: Option<String>,
+
+	/// Search depthes: <random search depth>,<bruteforce search depth>
+	#[arg(short='d', long)]
+	search_depthes: Option<String>,
 }
 
 struct CliArgsPost {
 	language: Language,
 	word12: Option<[String; 2]>,
+	search_depthes: Option<(u8, u8)>,
 }
 impl From<CliArgsPre> for CliArgsPost {
 	fn from(CliArgsPre {
 		language,
 		word12,
+		search_depthes,
 	}: CliArgsPre) -> Self {
 		Self {
 			language: match language.as_str() {
@@ -93,6 +104,13 @@ impl From<CliArgsPre> for CliArgsPost {
 			word12: word12
 				.map(|word12| {
 					word12.split_once([',', '.', '/', '~']).unwrap().to_strings().into()
+				}),
+			search_depthes: search_depthes
+				.map(|search_depthes| {
+					let (sd1, sd2) = search_depthes.split_once([',', '.']).unwrap();
+					let sd1: u8 = sd1.parse().unwrap();
+					let sd2: u8 = sd2.parse().unwrap();
+					(sd1, sd2)
 				}),
 		}
 	}
@@ -191,7 +209,7 @@ fn main_with_lang<const A: u8>(cli_args: CliArgsPost) {
 	let word1 = get_word_lang(1);
 	let word2 = get_word_lang(2);
 	let word2_len = word2.len();
-	let solution = find_solution_st(word1, word2);
+	let solution = find_solution_st(word1, word2, cli_args.search_depthes);
 	println!("{}: {solution:#?}", loc.solution);
 	let solution_len = solution.len();
 	println!("{}: {solution_len}", loc.solution_len);
@@ -247,6 +265,18 @@ enum Action {
 }
 
 impl Action {
+	fn enum_variant_count() -> usize {
+		let mut n: usize = 0;
+		#[cfg(feature="add")]     { n += 1 }
+		#[cfg(feature="remove")]  { n += 1 }
+		#[cfg(feature="replace")] { n += 1 }
+		#[cfg(feature="swap")]    { n += 1 }
+		#[cfg(feature="discard")] { n += 1 }
+		#[cfg(feature="take")]    { n += 1 }
+		#[cfg(feature="copy")]    { n += 1 }
+		n
+	}
+
 	fn shift_indices_mut(&mut self, shift: usize) {
 		use Action::*;
 		match self {
@@ -318,6 +348,16 @@ impl Action {
 			#[cfg(feature="swap")]
 			Swap { .. } if l2 == 0 => true,
 
+			#[cfg(feature="discard")]
+			Discard { .. } if l1 <= 1 => true,
+			#[cfg(feature="take")]
+			Take { .. } if l1 <= 2 => true,
+			#[cfg(feature="copy")]
+			Copy_ { .. } if l1 <= 1 || l2 <= 1 => true,
+
+			#[cfg(feature="copy")]
+			Copy_ { .. } if l1 == 2 && l2 < 4 => true, // TODO: recheck
+
 			// TODO: more?
 
 			_ => false
@@ -340,6 +380,14 @@ impl Action {
 			#[cfg(all(feature="add", feature="remove"))]
 			(Add { index: i1, .. }, Remove { index: i2 }) if i1 == i2 => true,
 
+			_ => false
+		}
+	}
+
+	fn is_copy(&self) -> bool {
+		match self {
+			#[cfg(feature="copy")]
+			Self::Copy_ { .. } => { true }
 			_ => false
 		}
 	}
@@ -370,6 +418,15 @@ impl Language {
 			Eng => ALPHABET_ENG,
 			Ukr => ALPHABET_UKR,
 		}
+	}
+	// pub fn get_random_char(lang_index: u8) -> char {
+	// 	Self::get_random_char_with_rng(lang_index, &mut thread_rng())
+	// }
+	pub fn get_random_char_with_rng(lang_index: u8, rng: &mut ThreadRng) -> char {
+		let alphabet = Self::get_alphabet_from_lang_index(lang_index);
+		alphabet.chars()
+			.nth(rng.gen_range(0..alphabet.len()))
+			.unwrap()
 	}
 }
 
@@ -524,6 +581,148 @@ impl<const A: u8> Word<A> {
 	fn dropped_last(&self) -> Self {
 		self.dropped_at_index(self.len()-1)
 	}
+
+	fn gen_random_legal_action(&self) -> Action {
+		loop {
+			let random_action = self.gen_random_action();
+			if self.is_legal_action(random_action) {
+				return random_action;
+			}
+		}
+	}
+
+	fn gen_random_action(&self) -> Action {
+		use Action::*;
+		// println!("{}", "-".repeat(42));
+		let mut rng = thread_rng();
+		macro_rules! random { ($range:expr) => { rng.gen_range($range) } }
+		macro_rules! random_char { () => { Language::get_random_char_with_rng(A, &mut rng) } }
+		let len = self.len();
+		// dbg!(len);
+		macro_rules! random_index    { () => { random!(0..len)   } }
+		macro_rules! random_index_p1 { () => { random!(0..=len) } }
+
+		macro_rules! random_add {
+			() => {
+				Add {
+					index: random_index_p1!(),
+					char: random_char!(),
+				}
+			};
+		}
+
+		if len == 0 { // see #c5ef13
+			#[cfg(feature="add")]
+			return random_add!();
+			#[allow(unreachable_code)]
+			{unreachable!("any other action with len==0 is impossible")}
+		}
+
+		macro_rules! random_index_m1 { () => { random!(0..len-1) } }
+		macro_rules! random_index_m2 { () => { random!(0..len-2) } }
+
+		// let mut random_action_index = random!(0..enum_variant_count::<Action>()); // TODO
+		let mut random_action_index = random!(0..{
+			let mut max = Action::enum_variant_count();
+			match len {
+				0 => unreachable!(), // checked above, see #c5ef13
+				1 => {
+					#[cfg(feature="swap")] { max -= 1 }
+					#[cfg(feature="discard")] { max -= 1 }
+					#[cfg(feature="take")] { max -= 1 }
+					#[cfg(feature="copy")] { max -= 1 }
+				}
+				2 => {}
+				_ => {}
+			}
+			max
+		});
+		// dbg!(random_action_index);
+
+
+		assert!(random_action_index < Action::enum_variant_count());
+
+		// dbg!(random_action_index);
+		// dbg!();
+		#[cfg(feature="add")] {
+			if random_action_index == 0 {
+				return random_add!();
+			}
+			random_action_index -= 1;
+		}
+		// dbg!();
+		#[cfg(feature="remove")] {
+			if random_action_index == 0 {
+				return Remove {
+					index: random_index!(),
+				};
+			}
+			random_action_index -= 1;
+		}
+		// dbg!();
+		#[cfg(feature="replace")] {
+			if random_action_index == 0 {
+				return Replace {
+					index: random_index!(),
+					char: random_char!(),
+				};
+			}
+			random_action_index -= 1;
+		}
+		// dbg!();
+		#[cfg(feature="swap")] {
+			assert!(len >= 2);
+			if random_action_index == 0 {
+				let index1s = random_index_m1!();
+				// dbg!(index1s);
+				let index1e = random!(index1s..len).min(len-2);
+				// dbg!(index1e);
+				let index2s = random!(index1e+1..len);
+				// dbg!(index2s);
+				let index2e = random!(index2s..len);
+				// dbg!(index2e);
+				return Swap { index1s, index1e, index2s, index2e };
+			}
+			random_action_index -= 1;
+		}
+		// dbg!();
+		#[cfg(feature="discard")] {
+			if random_action_index == 0 {
+				let index_start = random_index_m1!();
+				// dbg!(index_start);
+				let index_end = random!(index_start+1..len);
+				// dbg!(index_end);
+				return Discard { index_start, index_end };
+			}
+			random_action_index -= 1;
+		}
+		// dbg!();
+		#[cfg(feature="take")] {
+			if random_action_index == 0 {
+				let index_start = random_index_m1!();
+				// dbg!(index_start);
+				let index_end = random!(index_start+1..len);
+				// dbg!(index_end);
+				return Take { index_start, index_end };
+			}
+			random_action_index -= 1;
+		}
+		// dbg!();
+		#[cfg(feature="copy")] {
+			assert!(len >= 2);
+			if random_action_index == 0 {
+				let index_start = if len == 2 { 0 } else { random_index_m2!() };
+				// dbg!(index_start);
+				let index_end = if len == 2 { 2 } else { random!(index_start+2..len) };
+				// dbg!(index_end);
+				let index_insert = random_index_p1!();
+				// dbg!(index_insert);
+				return Copy_ { index_start, index_end, index_insert };
+			}
+			random_action_index -= 1;
+		}
+		unreachable!()
+	}
 }
 
 
@@ -568,44 +767,63 @@ fn calc_common_prefix_and_suffix_len<const A: u8>(word1: &Word<A>, word2: &Word<
 fn find_solutions_st<const A: u8>(
 	word_initial: Word<A>,
 	word_target: Word<A>,
+	mut search_depth_left: Option<u8>,
 ) -> Vec<Vec<Action>> {
 	// println!("{}", "-".repeat(42));
 	// println!("[{f}:{l}] initial: {}\t\ttarget: {}", word_initial.to_string(), word_target.to_string(), f=file!(), l=line!());
+	// dbg!(search_depth_left);
 	if word_initial == word_target { return vec![vec![]] }
 	let mut words: Vec<(Word<A>, Vec<Action>)> = vec![(word_initial, vec![])];
 	let mut new_words: Vec<(Word<A>, Vec<Action>)> = vec![];
 	let mut solutions: Vec<Vec<Action>> = vec![];
-	let mut search_depth: u8 = 0;
-	while solutions.is_empty() {
-		search_depth += 1;
-		// dbg!(search_depth);
+	while solutions.is_empty() && search_depth_left.is_none_or(|sdl| sdl > 0) {
+		// dbg!(search_depth_left);
+		if let Some(ref mut sdl) = search_depth_left {
+			// dbg!(&sdl);
+			*sdl -= 1;
+			// dbg!(&sdl);
+		}
 		for (word, actions) in words.into_iter() {
 			// dbg!(&word, &word_target, &actions);
+			macro_rules! all_actions {
+				() => {{
+					#[cfg(feature="aa_by_coroutine")]
+					let iter = word.clone().all_actions_iter_by_coroutine();
+					#[cfg(feature="aa_by_vec")]
+					let iter = word.clone().all_actions_vec();
+					#[cfg(feature="aa_by_gen_block")]
+					let iter = word.clone().all_actions_iter_by_gen_block();
+					#[cfg(feature="aa_by_vec_sbp")]
+					let iter = word.clone().all_actions_vec_sorted_by_priority();
+					#[cfg(feature="aa_by_gen_fn")]
+					let iter = word.clone().all_actions_iter_by_gen_fn();
+					iter.into_iter()
+				}};
+			}
+			macro_rules! apply_action_and_update {
+				($action:ident) => {
+					let new_word = word.apply_action($action);
+					// dbg!(&new_word);
+					let new_actions = actions.clone().pushed_opt($action);
+					if new_word == word_target { solutions.push(new_actions.clone()) }
+					new_words.push((new_word, new_actions));
+				};
+			}
+			#[cfg(feature="copy")] {
+				for action in all_actions!().filter(|a| a.is_copy()) {
+					// TODO(optim): add `is_vain*` checks?
+					apply_action_and_update!(action);
+				}
+			}
 			match calc_common_prefix_and_suffix_len(&word, &word_target) {
 				PrefixSuffixLen { prefix_len: 0, suffix_len: 0 } => {
-					for action in {
-						#[cfg(feature="aa_by_coroutine")]
-						let iter = word.clone().all_actions_iter_by_coroutine();
-						#[cfg(feature="aa_by_vec")]
-						let iter = word.clone().all_actions_vec();
-						#[cfg(feature="aa_by_gen_block")]
-						let iter = word.clone().all_actions_iter_by_gen_block();
-						#[cfg(feature="aa_by_vec_sbp")]
-						let iter = word.clone().all_actions_vec_sorted_by_priority();
-						#[cfg(feature="aa_by_gen_fn")]
-						let iter = word.clone().all_actions_iter_by_gen_fn();
-						iter
-					} {
+					for action in all_actions!().filter(|a| !a.is_copy()) {
 						// use optimizations 1:
 						if action.is_vain::<A>(word.len(), word_target.len()) { continue }
 						// use optimizations 2:
 						// if let Some(action_prev) = actions.last() && action_prev.is_vain_with(&action) { continue } // TODO
 						if actions.last().is_some_and(|action_prev| action_prev.is_vain_with(&action)) { continue }
-						let new_word = word.apply_action(action);
-						// dbg!(&new_word);
-						let new_actions = actions.clone().pushed_opt(action);
-						if new_word == word_target { solutions.push(new_actions.clone()) }
-						new_words.push((new_word, new_actions));
+						apply_action_and_update!(action);
 					}
 				}
 				PrefixSuffixLen { prefix_len, suffix_len } => {
@@ -614,7 +832,8 @@ fn find_solutions_st<const A: u8>(
 					// dbg!(prefix_len, suffix_len);
 					let word_ncp = Word::<A>::from(&word.chars[prefix_len..word.len()-suffix_len]);
 					let word_target_ncp = Word::from(&word_target.chars[prefix_len..word_target.len()-suffix_len]);
-					for solution in find_solutions_st(word_ncp, word_target_ncp) {
+					new_words.shrink_to_fit();
+					for solution in find_solutions_st(word_ncp, word_target_ncp, search_depth_left.map(|sdl| sdl+1)) {
 						let mut solution: Vec<Action> = solution
 							.iter()
 							.map(|a| a.shifted_indices(prefix_len))
@@ -638,11 +857,38 @@ fn find_solutions_st<const A: u8>(
 fn find_solution_st<const A: u8>(
 	word_initial: Word<A>,
 	word_target: Word<A>,
+	search_depthes: Option<(u8, u8)>,
 ) -> Vec<Action> {
-	find_solutions_st(word_initial, word_target)
-		.into_iter()
-		.min_by_key(|s| s.len())
-		.unwrap()
+	// println!("[{f}:{l}] initial: {}\t\ttarget: {}", word_initial.to_string(), word_target.to_string(), f=file!(), l=line!());
+	if let Some((random_search_depth, bruteforce_search_depth)) = search_depthes {
+		loop {
+			let mut random_actions = Vec::<Action>::with_capacity(random_search_depth as usize);
+			let mut word_initial = word_initial.clone();
+			for _rsd in 0..random_search_depth {
+				let random_action = word_initial.gen_random_legal_action();
+				word_initial.apply_action_mut(random_action);
+				random_actions.push(random_action);
+				if word_initial == word_target {
+					return random_actions;
+				}
+			}
+			// dbg!(&word_initial);
+			let solution = find_solutions_st(word_initial, word_target.clone(), Some(bruteforce_search_depth))
+				.into_iter()
+				.min_by_key(|s| s.len());
+			if let Some(s) = solution {
+				let mut actions = random_actions;
+				actions.extend(s);
+				return actions;
+			}
+		}
+	}
+	else {
+		find_solutions_st(word_initial, word_target, None)
+			.into_iter()
+			.min_by_key(|s| s.len())
+			.unwrap()
+	}
 }
 
 fn find_solution_mt() {
@@ -675,7 +921,7 @@ mod tests {
 		fn trivial() {
 			assert_eq!(
 				Vec::<Action>::new(),
-				find_solution_st(WordEng::new("foobar"), WordEng::new("foobar"))
+				find_solution_st(WordEng::new("foobar"), WordEng::new("foobar"), None)
 			)
 		}
 
@@ -687,7 +933,7 @@ mod tests {
 			fn b() {
 				assert_eq!(
 					vec![Add { index: 0, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("xfoobar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("xfoobar"), None)
 				)
 			}
 			#[test]
@@ -697,7 +943,7 @@ mod tests {
 						Add { index: 0, char: 'x' },
 						Add { index: 0, char: 'y' },
 					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("yxfoobar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("yxfoobar"), None)
 				)
 			}
 			#[test]
@@ -708,14 +954,14 @@ mod tests {
 						Add { index: 0, char: 'y' },
 						Add { index: 0, char: 'z' },
 					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("zyxfoobar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("zyxfoobar"), None)
 				)
 			}
 			#[test]
 			fn e() {
 				assert_eq!(
 					vec![Add { index: 6, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarx"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarx"), None)
 				)
 			}
 			#[test]
@@ -725,7 +971,7 @@ mod tests {
 						Add { index: 6, char: 'x' },
 						Add { index: 7, char: 'y' },
 					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxy"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxy"), None)
 				)
 			}
 			#[test]
@@ -736,14 +982,14 @@ mod tests {
 						Add { index: 7, char: 'y' },
 						Add { index: 8, char: 'z' },
 					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxyz"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarxyz"), None)
 				)
 			}
 			#[test]
 			fn m() {
 				assert_eq!(
 					vec![Add { index: 3, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxbar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxbar"), None)
 				)
 			}
 			#[test]
@@ -753,7 +999,7 @@ mod tests {
 						Add { index: 3, char: 'x' },
 						Add { index: 4, char: 'y' },
 					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxybar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxybar"), None)
 				)
 			}
 			#[test]
@@ -764,7 +1010,7 @@ mod tests {
 						Add { index: 4, char: 'y' },
 						Add { index: 5, char: 'z' },
 					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxyzbar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("fooxyzbar"), None)
 				)
 			}
 		}
@@ -777,7 +1023,7 @@ mod tests {
 			fn b() {
 				assert_eq!(
 					vec![Remove { index: 0 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("oobar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("oobar"), None)
 				)
 			}
 			#[ignore = "discard solves it better"]
@@ -788,7 +1034,7 @@ mod tests {
 						Remove { index: 0 },
 						Remove { index: 0 },
 					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("obar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("obar"), None)
 				)
 			}
 			#[ignore = "discard solves it better"]
@@ -800,14 +1046,14 @@ mod tests {
 						Remove { index: 0 },
 						Remove { index: 0 },
 					],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("bar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("bar"), None)
 				)
 			}
 			#[test]
 			fn e() {
 				assert_eq!(
 					vec![Remove { index: 5 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fooba"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("fooba"), None)
 				)
 			}
 			#[ignore = "discard solves it better"]
@@ -823,7 +1069,7 @@ mod tests {
 						Remove { index: 4 },
 					],
 				];
-				let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foob"));
+				let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foob"), None);
 				dbg!(&expected_solutions, &actual_solution);
 				assert!(expected_solutions.contains(&actual_solution))
 			}
@@ -842,7 +1088,7 @@ mod tests {
 						Remove { index: 3 },
 					],
 				];
-				let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foo"));
+				let actual_solution = find_solution_st(WordEng::new("foobar"), WordEng::new("foo"), None);
 				dbg!(&expected_solutions, &actual_solution);
 				assert!(expected_solutions.contains(&actual_solution))
 			}
@@ -856,21 +1102,21 @@ mod tests {
 			fn b() {
 				assert_eq!(
 					vec![Replace { index: 0, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("xoobar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("xoobar"), None)
 				)
 			}
 			#[test]
 			fn e() {
 				assert_eq!(
 					vec![Replace { index: 5, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobax"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foobax"), None)
 				)
 			}
 			#[test]
 			fn m() {
 				assert_eq!(
 					vec![Replace { index: 2, char: 'x' }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foxbar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foxbar"), None)
 				)
 			}
 		}
@@ -883,14 +1129,14 @@ mod tests {
 			fn foobar_barfoo() {
 				assert_eq!(
 					vec![Swap { index1s: 0, index1e: 2, index2s: 3, index2e: 5 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoo"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoo"), None)
 				)
 			}
 			#[test]
 			fn abcfoodefbarxyz_abcbardeffooxyz() {
 				assert_eq!(
 					vec![Swap { index1s: 3, index1e: 5, index2s: 9, index2e: 11 }],
-					find_solution_st(WordEng::new("abcfoodefbarxyz"), WordEng::new("abcbardeffooxyz"))
+					find_solution_st(WordEng::new("abcfoodefbarxyz"), WordEng::new("abcbardeffooxyz"), None)
 				)
 			}
 		}
@@ -903,42 +1149,42 @@ mod tests {
 			fn b2() {
 				assert_eq!(
 					vec![Discard { index_start: 0, index_end: 1 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("obar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("obar"), None)
 				)
 			}
 			#[test]
 			fn b3() {
 				assert_eq!(
 					vec![Discard { index_start: 0, index_end: 2 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("bar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("bar"), None)
 				)
 			}
 			#[test]
 			fn e2() {
 				assert_eq!(
 					vec![Discard { index_start: 4, index_end: 5 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foob"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foob"), None)
 				)
 			}
 			#[test]
 			fn e3() {
 				assert_eq!(
 					vec![Discard { index_start: 3, index_end: 5 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foo"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foo"), None)
 				)
 			}
 			#[test]
 			fn m2() {
 				assert_eq!(
 					vec![Discard { index_start: 2, index_end: 3 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foar"), None)
 				)
 			}
 			#[test]
 			fn m4() {
 				assert_eq!(
 					vec![Discard { index_start: 1, index_end: 4 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("fr"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("fr"), None)
 				)
 			}
 		}
@@ -951,7 +1197,7 @@ mod tests {
 			fn foobarxyz_foo() {
 				assert_eq!(
 					vec![Take { index_start: 3, index_end: 5 }],
-					find_solution_st(WordEng::new("foobarxyz"), WordEng::new("bar"))
+					find_solution_st(WordEng::new("foobarxyz"), WordEng::new("bar"), None)
 				)
 			}
 		}
@@ -961,12 +1207,19 @@ mod tests {
 			use super::*;
 			use Action::Copy_;
 			#[test]
+			fn abcd_ababcdcd() {
+				assert_eq!(
+					vec![Copy_ { index_start: 0, index_end: 3, index_insert: 2 }],
+					find_solution_st(WordEng::new("abcd"), WordEng::new("ababcdcd"), None)
+				)
+			}
+			#[test]
 			fn foo_foofoo() {
 				let expected_solutions = [
 					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 0 }],
 					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 3 }],
 				];
-				let actual_solution = find_solution_st(WordEng::new("foo"), WordEng::new("foofoo"));
+				let actual_solution = find_solution_st(WordEng::new("foo"), WordEng::new("foofoo"), None);
 				dbg!(&expected_solutions, &actual_solution);
 				assert!(expected_solutions.contains(&actual_solution))
 			}
@@ -974,14 +1227,14 @@ mod tests {
 			fn foobar_foobarfoo() {
 				assert_eq!(
 					vec![Copy_ { index_start: 0, index_end: 2, index_insert: 6 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarfoo"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("foobarfoo"), None)
 				)
 			}
 			#[test]
 			fn foobar_barfoobar() {
 				assert_eq!(
 					vec![Copy_ { index_start: 3, index_end: 5, index_insert: 0 }],
-					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoobar"))
+					find_solution_st(WordEng::new("foobar"), WordEng::new("barfoobar"), None)
 				)
 			}
 		}
