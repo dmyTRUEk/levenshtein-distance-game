@@ -5,11 +5,11 @@
 	unused_results,
 )]
 
-// TODO
-// #![feature(
-// 	let_chains,
-// 	variant_count, // TODO
-// )]
+#![feature(
+	let_chains,
+	stmt_expr_attributes,
+	variant_count,
+)]
 
 #![cfg_attr(
 	feature="aa_by_coroutine",
@@ -24,7 +24,7 @@
 
 
 use std::{
-	// mem::variant_count as enum_variant_count, // TODO
+	mem::variant_count as enum_variant_count,
 	ops::Add,
 };
 
@@ -265,18 +265,6 @@ enum Action {
 }
 
 impl Action {
-	fn enum_variant_count() -> usize {
-		let mut n: usize = 0;
-		#[cfg(feature="add")]     { n += 1 }
-		#[cfg(feature="remove")]  { n += 1 }
-		#[cfg(feature="replace")] { n += 1 }
-		#[cfg(feature="swap")]    { n += 1 }
-		#[cfg(feature="drop")]    { n += 1 }
-		#[cfg(feature="take")]    { n += 1 }
-		#[cfg(feature="copy")]    { n += 1 }
-		n
-	}
-
 	fn shift_indices_mut(&mut self, shift: usize) {
 		use Action::*;
 		match self {
@@ -621,9 +609,8 @@ impl<const A: u8> Word<A> {
 		macro_rules! random_index_m1 { () => { random!(0..len-1) } }
 		macro_rules! random_index_m2 { () => { random!(0..len-2) } }
 
-		// let mut random_action_index = random!(0..enum_variant_count::<Action>()); // TODO
 		let mut random_action_index = random!(0..{
-			let mut max = Action::enum_variant_count();
+			let mut max = enum_variant_count::<Action>();
 			match len {
 				0 => unreachable!(), // checked above, see #c5ef13
 				1 => {
@@ -640,7 +627,7 @@ impl<const A: u8> Word<A> {
 		// dbg!(random_action_index);
 
 
-		assert!(random_action_index < Action::enum_variant_count());
+		assert!(random_action_index < enum_variant_count::<Action>());
 
 		// dbg!(random_action_index);
 		// dbg!();
@@ -719,6 +706,7 @@ impl<const A: u8> Word<A> {
 				// dbg!(index_insert);
 				return Copy_ { index_start, index_end, index_insert };
 			}
+			#[allow(unused_assignments)]
 			random_action_index -= 1;
 		}
 		unreachable!()
@@ -821,8 +809,7 @@ fn find_solutions_st<const A: u8>(
 						// use optimizations 1:
 						if action.is_vain::<A>(word.len(), word_target.len()) { continue }
 						// use optimizations 2:
-						// if let Some(action_prev) = actions.last() && action_prev.is_vain_with(&action) { continue } // TODO
-						if actions.last().is_some_and(|action_prev| action_prev.is_vain_with(&action)) { continue }
+						if let Some(action_prev) = actions.last() && action_prev.is_vain_with(&action) { continue }
 						apply_action_and_update!(action);
 					}
 				}
