@@ -315,6 +315,7 @@ impl Action {
 
 	fn is_vain<const A: u8>(&self, word1_len: usize, word2_len: usize) -> bool {
 		use Action::*;
+		#[allow(unused_variables)]
 		let l1 = word1_len;
 		let l2 = word2_len;
 		match self {
@@ -355,6 +356,7 @@ impl Action {
 	/// `action_prev.is_stupid_before(action_next)`
 	/// returns if `action_next` is stupid after `action_prev`.
 	fn is_vain_with(&self, action_next: &Action) -> bool {
+		#[allow(unused_imports)]
 		use Action::*;
 		match (self, action_next) {
 			// OPTIMIZATIONS 2:
@@ -606,10 +608,13 @@ impl<const A: u8> Word<A> {
 			{unreachable!("any other action with len==0 is impossible")}
 		}
 
+		#[allow(unused_macros)]
 		macro_rules! random_index_m1 { () => { random!(0..len-1) } }
+		#[allow(unused_macros)]
 		macro_rules! random_index_m2 { () => { random!(0..len-2) } }
 
 		let mut random_action_index = random!(0..{
+			#[allow(unused_mut)]
 			let mut max = enum_variant_count::<Action>();
 			match len {
 				0 => unreachable!(), // checked above, see #c5ef13
@@ -635,6 +640,7 @@ impl<const A: u8> Word<A> {
 			if random_action_index == 0 {
 				return random_add!();
 			}
+			#[allow(unused_assignments)]
 			random_action_index -= 1;
 		}
 		// dbg!();
@@ -644,6 +650,7 @@ impl<const A: u8> Word<A> {
 					index: random_index!(),
 				};
 			}
+			#[allow(unused_assignments)]
 			random_action_index -= 1;
 		}
 		// dbg!();
@@ -654,6 +661,7 @@ impl<const A: u8> Word<A> {
 					char: random_char!(),
 				};
 			}
+			#[allow(unused_assignments)]
 			random_action_index -= 1;
 		}
 		// dbg!();
@@ -670,6 +678,7 @@ impl<const A: u8> Word<A> {
 				// dbg!(index2e);
 				return Swap { index1s, index1e, index2s, index2e };
 			}
+			#[allow(unused_assignments)]
 			random_action_index -= 1;
 		}
 		// dbg!();
@@ -681,6 +690,7 @@ impl<const A: u8> Word<A> {
 				// dbg!(index_end);
 				return Drop_ { index_start, index_end };
 			}
+			#[allow(unused_assignments)]
 			random_action_index -= 1;
 		}
 		// dbg!();
@@ -692,6 +702,7 @@ impl<const A: u8> Word<A> {
 				// dbg!(index_end);
 				return Take { index_start, index_end };
 			}
+			#[allow(unused_assignments)]
 			random_action_index -= 1;
 		}
 		// dbg!();
