@@ -1,13 +1,13 @@
 [package]
 name = "levenshtein-distance-game"
-version = "0.12.1"
+version = "0.13.0"
 edition = "2024"
 authors = ["dmyTRUEk"]
 
 [features]
 default = [
 	"arrsdtc",
-	"aa_by_vec",
+	"aa_by_coroutine",
 ]
 # rules:
 add = []
