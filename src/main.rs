@@ -442,7 +442,7 @@ impl<const A: u8> Word<A> {
 		Self::from(&word_str.chars().collect::<Vec<char>>())
 	}
 
-	#[expect(unused)]
+	#[allow(dead_code)]
 	fn to_string(&self) -> String {
 		self.chars.iter().collect()
 	}
@@ -775,6 +775,7 @@ fn find_solutions_st<const A: u8>(
 			// dbg!(&word, &word_target, &actions);
 			macro_rules! all_actions {
 				() => {{
+					// TODO: use `let iter; iter = ...`?
 					#[cfg(feature="aa_by_coroutine")]
 					let iter = word.all_actions_iter_by_coroutine();
 					#[cfg(feature="aa_by_vec")]
@@ -878,6 +879,9 @@ fn find_solution_st<const A: u8>(
 	}
 }
 
+
+
+#[expect(dead_code)]
 fn find_solution_mt() {
 	todo!()
 }
@@ -898,6 +902,7 @@ fn calc_score(word2_len: usize, solution_len: usize) -> u8 {
 
 // TESTS:
 
+#[allow(dead_code)] // reason: for tests
 type WordEng = Word<{Language::ENG}>;
 // type WordUkr = Word<{Language::UKR}>;
 
@@ -1353,7 +1358,6 @@ mod random_search {
 		}
 	}
 	mod completeness {
-		use super::*;
 		#[ignore = "TODO"]
 		#[test]
 		fn todo() {
