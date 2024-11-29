@@ -4,7 +4,7 @@ use crate::{Action, Language, Word};
 
 
 impl<const A: u8> Word<A> {
-	pub gen fn all_actions_iter_by_gen_fn(self) -> Action {
+	pub gen fn all_actions_iter_by_gen_fn(&self) -> Action {
 		use Action::*;
 		let len = self.len();
 		let alphabet = Language::get_alphabet_from_lang_index(A);

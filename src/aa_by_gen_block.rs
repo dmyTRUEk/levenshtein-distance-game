@@ -4,7 +4,7 @@ use crate::{Action, Language, Word};
 
 
 impl<const A: u8> Word<A> {
-	pub fn all_actions_iter_by_gen_block(self) -> impl Iterator<Item=Action> {
+	pub fn all_actions_iter_by_gen_block(&self) -> impl Iterator<Item=Action> {
 		use Action::*;
 		gen move { // edition2024 is required for this
 			let len = self.len();

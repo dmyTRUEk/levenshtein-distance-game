@@ -4,7 +4,7 @@ use crate::{Action, Language, Word};
 
 
 impl<const A: u8> Word<A> {
-	pub fn all_actions_vec(self) -> Vec<Action> {
+	pub fn all_actions_vec(&self) -> Vec<Action> {
 		use Action::*;
 
 		let len = self.len();

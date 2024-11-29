@@ -788,15 +788,15 @@ fn find_solutions_st<const A: u8>(
 			macro_rules! all_actions {
 				() => {{
 					#[cfg(feature="aa_by_coroutine")]
-					let iter = word.clone().all_actions_iter_by_coroutine();
+					let iter = word.all_actions_iter_by_coroutine();
 					#[cfg(feature="aa_by_vec")]
-					let iter = word.clone().all_actions_vec();
+					let iter = word.all_actions_vec();
 					#[cfg(feature="aa_by_gen_block")]
-					let iter = word.clone().all_actions_iter_by_gen_block();
+					let iter = word.all_actions_iter_by_gen_block();
 					#[cfg(feature="aa_by_vec_sbp")]
-					let iter = word.clone().all_actions_vec_sorted_by_priority();
+					let iter = word.all_actions_vec_sorted_by_priority();
 					#[cfg(feature="aa_by_gen_fn")]
-					let iter = word.clone().all_actions_iter_by_gen_fn();
+					let iter = word.all_actions_iter_by_gen_fn();
 					iter.into_iter()
 				}};
 			}

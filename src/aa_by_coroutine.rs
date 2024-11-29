@@ -7,7 +7,7 @@ use crate::{Action, Language, Word};
 
 
 impl<const A: u8> Word<A> {
-	pub fn all_actions_iter_by_coroutine(self) -> impl Iterator<Item=Action> {
+	pub fn all_actions_iter_by_coroutine(&self) -> impl Iterator<Item=Action> {
 		use Action::*;
 		from_coroutine(#[coroutine] move || {
 			let len = self.len();

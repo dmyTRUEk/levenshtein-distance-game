@@ -4,7 +4,7 @@ use crate::{Action, Word};
 
 
 impl<const A: u8> Word<A> {
-	pub fn all_actions_vec_sorted_by_priority(self) -> Vec<Action> {
+	pub fn all_actions_vec_sorted_by_priority(&self) -> Vec<Action> {
 		let mut actions_vec = self.all_actions_vec();
 		sort_by_priority(&mut actions_vec);
 		actions_vec.shrink_to_fit();
@@ -22,7 +22,7 @@ fn sorted_by_priority(mut v: Vec<Action>) -> Vec<Action> {
 }
 
 impl Action {
-	fn priority(self) -> i32 {
+	fn priority(&self) -> i32 {
 		use Action::*;
 		match self {
 			#[cfg(feature="add")]
@@ -36,31 +36,31 @@ impl Action {
 
 			#[cfg(feature="swap")]
 			Swap { index1s, index1e, index2s, index2e } => {
-				let index1s = index1s as i32;
-				let index1e = index1e as i32;
-				let index2s = index2s as i32;
-				let index2e = index2e as i32;
+				let index1s = *index1s as i32;
+				let index1e = *index1e as i32;
+				let index2s = *index2s as i32;
+				let index2e = *index2e as i32;
 				(index1e - index1s + 1) * (index2e - index2s + 1)
 			}
 
 			#[cfg(feature="drop")]
 			Drop_ { index_start, index_end } => {
-				let index_start = index_start as i32;
-				let index_end = index_end as i32;
+				let index_start = *index_start as i32;
+				let index_end = *index_end as i32;
 				-(index_end - index_start + 1)
 			}
 
 			#[cfg(feature="take")]
 			Take { index_start, index_end } => {
-				let index_start = index_start as i32;
-				let index_end = index_end as i32;
+				let index_start = *index_start as i32;
+				let index_end = *index_end as i32;
 				-(index_end - index_start + 1)
 			}
 
 			#[cfg(feature="copy")]
 			Copy_ { index_start, index_end, .. } => {
-				let index_start = index_start as i32;
-				let index_end = index_end as i32;
+				let index_start = *index_start as i32;
+				let index_end = *index_end as i32;
 				// let index_insert = index_insert as i32;
 				index_end - index_start
 			}
